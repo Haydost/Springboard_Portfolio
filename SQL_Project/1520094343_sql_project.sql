@@ -207,6 +207,7 @@ WHERE b.starttime LIKE '2012-09-14%'
             OR 
         (b.memid <> '0' AND (f.membercost * b.slots >30))
         )
+ORDER BY cost        
 
 /* Answer:
 facilityname	membername	    cost	
