@@ -126,61 +126,61 @@ Include in your output the name of the court, and the name of the member
 formatted as a single column. Ensure no duplicate data, and order by
 the member name. */
 -- Query:
-SELECT DISTINCT CONCAT( f.name, ': ', m.firstname, ' ', m.surname ) AS result
+SELECT DISTINCT f.name as Facility, CONCAT( m.firstname, ' ', m.surname ) AS Name
 FROM country_club.Bookings b
 INNER JOIN country_club.Facilities f ON b.facid = f.facid
 INNER JOIN country_club.Members m ON b.memid = m.memid
 WHERE f.name LIKE '%Tennis Court%'
-ORDER BY result
+ORDER BY Name
 
 /* Answer:
-result	
-Tennis Court 1: Anne Baker
-Tennis Court 1: Burton Tracy
-Tennis Court 1: Charles Owen
-Tennis Court 1: David Farrell
-Tennis Court 1: David Jones
-Tennis Court 1: David Pinker
-Tennis Court 1: Douglas Jones
-Tennis Court 1: Erica Crumpet
-Tennis Court 1: Florence Bader
-Tennis Court 1: Gerald Butters
-Tennis Court 1: GUEST GUEST
-Tennis Court 1: Jack Smith
-Tennis Court 1: Janice Joplette
-Tennis Court 1: Jemima Farrell
-Tennis Court 1: Joan Coplin
-Tennis Court 1: John Hunt
-Tennis Court 1: Matthew Genting
-Tennis Court 1: Nancy Dare
-Tennis Court 1: Ponder Stibbons
-Tennis Court 1: Ramnaresh Sarwin
-Tennis Court 1: Tim Boothe
-Tennis Court 1: Tim Rownam
-Tennis Court 1: Timothy Baker
-Tennis Court 1: Tracy Smith
-Tennis Court 2: Anne Baker
-Tennis Court 2: Burton Tracy
-Tennis Court 2: Charles Owen
-Tennis Court 2: Darren Smith
-Tennis Court 2: David Farrell
-Tennis Court 2: David Jones
-Tennis Court 2: Florence Bader
-Tennis Court 2: Gerald Butters
-Tennis Court 2: GUEST GUEST
-Tennis Court 2: Henrietta Rumney
-Tennis Court 2: Jack Smith
-Tennis Court 2: Janice Joplette
-Tennis Court 2: Jemima Farrell
-Tennis Court 2: John Hunt
-Tennis Court 2: Millicent Purview
-Tennis Court 2: Nancy Dare
-Tennis Court 2: Ponder Stibbons
-Tennis Court 2: Ramnaresh Sarwin
-Tennis Court 2: Tim Boothe
-Tennis Court 2: Tim Rownam
-Tennis Court 2: Timothy Baker
-Tennis Court 2: Tracy Smith
+Facility	    Name	
+Tennis Court 1	Anne Baker
+Tennis Court 2	Anne Baker
+Tennis Court 1	Burton Tracy
+Tennis Court 2	Burton Tracy
+Tennis Court 1	Charles Owen
+Tennis Court 2	Charles Owen
+Tennis Court 2	Darren Smith
+Tennis Court 1	David Farrell
+Tennis Court 2	David Farrell
+Tennis Court 1	David Jones
+Tennis Court 2	David Jones
+Tennis Court 1	David Pinker
+Tennis Court 1	Douglas Jones
+Tennis Court 1	Erica Crumpet
+Tennis Court 2	Florence Bader
+Tennis Court 1	Florence Bader
+Tennis Court 1	Gerald Butters
+Tennis Court 2	Gerald Butters
+Tennis Court 2	GUEST GUEST
+Tennis Court 1	GUEST GUEST
+Tennis Court 2	Henrietta Rumney
+Tennis Court 2	Jack Smith
+Tennis Court 1	Jack Smith
+Tennis Court 1	Janice Joplette
+Tennis Court 2	Janice Joplette
+Tennis Court 1	Jemima Farrell
+Tennis Court 2	Jemima Farrell
+Tennis Court 1	Joan Coplin
+Tennis Court 1	John Hunt
+Tennis Court 2	John Hunt
+Tennis Court 1	Matthew Genting
+Tennis Court 2	Millicent Purview
+Tennis Court 2	Nancy Dare
+Tennis Court 1	Nancy Dare
+Tennis Court 1	Ponder Stibbons
+Tennis Court 2	Ponder Stibbons
+Tennis Court 2	Ramnaresh Sarwin
+Tennis Court 1	Ramnaresh Sarwin
+Tennis Court 1	Tim Boothe
+Tennis Court 2	Tim Boothe
+Tennis Court 2	Tim Rownam
+Tennis Court 1	Tim Rownam
+Tennis Court 2	Timothy Baker
+Tennis Court 1	Timothy Baker
+Tennis Court 2	Tracy Smith
+Tennis Court 1	Tracy Smith
 */
 
 
@@ -194,7 +194,7 @@ Order by descending cost, and do not use any subqueries. */
 SELECT f.name AS facilityname, CONCAT( m.firstname, ' ', m.surname ) AS membername,
 CASE
     WHEN b.memid = '0' THEN (f.guestcost * b.slots)
-    WHEN b.memid <> '0' THEN (f.membercost * b.slots)
+    ELSE (f.membercost * b.slots)
     END AS cost
 FROM country_club.Bookings b
     INNER JOIN country_club.Facilities f 
@@ -207,7 +207,7 @@ WHERE b.starttime LIKE '2012-09-14%'
             OR 
         (b.memid <> '0' AND (f.membercost * b.slots >30))
         )
-ORDER BY cost        
+ORDER BY cost DESC        
 
 /* Answer:
 facilityname	membername	    cost	
@@ -241,7 +241,7 @@ FROM country_club.Bookings b
         SELECT b.bookid, 
         	CASE
         		WHEN b.memid = '0' THEN (f.guestcost * b.slots)
-    			WHEN b.memid <> '0' THEN (f.membercost * b.slots)
+    			ELSE (f.membercost * b.slots)
     			END AS cost
         FROM country_club.Bookings b
         	INNER JOIN country_club.Facilities f
@@ -273,22 +273,16 @@ Squash Court	GUEST GUEST	    35.0
 The output of facility name and total revenue, sorted by revenue. Remember
 that there's a different cost for guests and members! */
 -- Query:
-SELECT	
-    f1.name,
-	sum(temp.amt) as totalrevenue 
-FROM country_club.Facilities f1
-	INNER JOIN (SELECT 
-        			f.facid as facid,
-                	CASE
-    					WHEN b.memid = '0' THEN (f.guestcost * b.slots)
-    					WHEN b.memid <> '0' THEN (f.membercost * b.slots)
-						END AS amt
-        		FROM country_club.Bookings b
-        			INNER JOIN country_club.Facilities f
-    					ON b.facid = f.facid) AS temp
-        ON f1.facid = temp.facid
-GROUP BY f1.name
-HAVING sum(temp.amt) < 1000
+SELECT 
+    f.name, 
+    SUM(CASE WHEN b.memid = '0' THEN (f.guestcost * b.slots)
+        ELSE (f.membercost * b.slots) END) AS totalrevenue
+FROM country_club.Facilities f
+    INNER JOIN country_club.Bookings b 
+        ON f.facid = b.facid
+GROUP BY f.name
+HAVING SUM(CASE WHEN b.memid = '0' THEN (f.guestcost * b.slots)
+            ELSE (f.membercost * b.slots) END) < 1000
 ORDER BY totalrevenue
 
 /* Answer:
