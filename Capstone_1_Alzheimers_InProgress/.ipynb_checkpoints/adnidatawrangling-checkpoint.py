@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Data Wrangling Module for Alzheimer's Capstone 1.
 
-This module returns two dataframes clin_data and scan_data.
-No filename is accepted as input. Designed for 'ADNIMERGE.csv' only.
+This module accepts the ADNIMERGE.csv filename as input
+and returns two dataframes clin_data and scan_data.
 
 This module is not designed to run with other .csv files.
 Suggested namespace is aw.
 """
 
-def wrangle_adni():
+def wrangle_adni(filename):
     """This function returns the two dataframes.
 
     Provide the ADNIMERGE.csv file as a string, and unpack
