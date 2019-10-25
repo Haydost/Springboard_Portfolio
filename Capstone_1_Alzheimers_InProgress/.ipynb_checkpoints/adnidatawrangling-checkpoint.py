@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """Data Wrangling Module for Alzheimer's Capstone 1.
 
-This module accepts the ADNIMERGE.csv filename as input
-and returns two dataframes clin_data and scan_data.
+This module returns three dataframes adni_comp, clin_data, and scan_data.
+No filename is needed as input. Uses/designed for 'ADNIMERGE.csv' only.
 
 This module is not designed to run with other .csv files.
 Suggested namespace is aw.
 """
 
-def wrangle_adni(filename):
+def wrangle_adni():
     """This function returns the two dataframes.
 
-    Provide the ADNIMERGE.csv file as a string, and unpack
-    the two dataframes clin_data and scan_data that are returned.
+    Unpack the two dataframes clin_data and scan_data that are returned.
     """
 
     # ensure pandas availability for the function
@@ -23,7 +22,7 @@ def wrangle_adni(filename):
     adni_full = pd.read_csv('ADNIMERGE.csv', dtype='object')
 
     # set the logical orders for the two diagnoses
-    DX = ['CN', 'MCI', 'Dementia']
+    DX = ['CN', 'MCI', 'AD']
     DX_bl = ['CN', 'SMC', 'EMCI', 'LMCI', 'AD']
 
     # initialize empty dataframe
@@ -70,10 +69,24 @@ def wrangle_adni(filename):
 
     # drop rows with missing diagnoses
     adni_dx = adni.dropna(subset=['DX', 'DX_bl'])
+    
+    # calculate dynamic age
+    adni_dx.loc[:, 'AGE_dynamic'] = adni_dx.AGE + (adni_dx.Month / 12)
+    
+    # create dataframe with only patients that have complete scan and clinical data
+    adni_rmv = adni_dx.dropna(how='any')
+    
+    # filter those results to only patients with multiple visits
+    num_comp_exams = adni_rmv.groupby('RID')['EXAMDATE_bl'].count()
+    adni_comp_filter = num_comp_exams[num_comp_exams > 1]
+    adni_comp = adni_rmv.loc[adni_comp_filter.index]
 
     # isolate clinical data
-    clinical = adni_dx.loc[:, 'EXAMDATE_bl':'RAVLT_immediate_bl']
-
+    clinical = pd.DataFrame()
+    clinical = adni_dx.loc[:, ['EXAMDATE_bl', 'Month', 'PTGENDER', 'DX', 'DX_bl', 'PTEDUCAT', 'AGE', 'AGE_dynamic',
+                              'CDRSB', 'CDRSB_bl', 'ADAS11', 'ADAS11_bl', 'ADAS13', 'ADAS13_bl', 'MMSE',
+                              'MMSE_bl', 'RAVLT_immediate', 'RAVLT_immediate_bl']]
+    
     # remove rows missing any values
     clinical_rmv = clinical.dropna(how='any')
 
@@ -83,10 +96,10 @@ def wrangle_adni(filename):
     clin_data = clinical_rmv.loc[clin_filter.index]
 
     # filter the scan data
-    scans = adni_dx.loc[:, 'Hippocampus':]
-
-    # add EXAMDATE_bl back in
-    scans['EXAMDATE_bl'] = adni_dx.EXAMDATE_bl
+    scans = pd.DataFrame()
+    scans = adni_dx.loc[:, ['EXAMDATE_bl', 'Month', 'PTGENDER', 'DX', 'DX_bl', 'PTEDUCAT', 'AGE', 'AGE_dynamic',
+                           'Hippocampus', 'Hippocampus_bl', 'Ventricles', 'Ventricles_bl', 'WholeBrain', 'WholeBrain_bl',
+                           'Entorhinal', 'Entorhinal_bl', 'MidTemp', 'MidTemp_bl', ]]
 
     # filter for complete rows
     scans_rmv = scans.dropna(how='any')
@@ -96,4 +109,4 @@ def wrangle_adni(filename):
     scan_filter = num_scan_exams[num_scan_exams > 1]
     scan_data = scans_rmv.loc[scan_filter.index]
 
-    return clin_data, scan_data
+    return adni_comp, clin_data, scan_data
