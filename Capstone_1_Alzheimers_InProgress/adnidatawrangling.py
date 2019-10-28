@@ -29,14 +29,14 @@ def wrangle_adni():
     adni = pd.DataFrame()
 
     # convert datatypes to categorical, datetime, and int
-    adni['PTGENDER'] = pd.Categorical(adni_full.PTGENDER)
-    adni['DX'] = pd.Categorical(adni_full.DX, ordered=True, categories=DX)
-    adni['DX_bl'] = pd.Categorical(adni_full.DX_bl, ordered=True, categories=DX_bl)
-    adni['EXAMDATE'] = pd.to_datetime(adni_full['EXAMDATE'])
-    adni['EXAMDATE_bl'] = pd.to_datetime(adni_full['EXAMDATE_bl'])
-    adni['PTEDUCAT'] = adni_full.PTEDUCAT.astype('int')
-    adni['Month'] = adni_full.Month.astype('int')
-    adni['RID'] = adni_full.RID.astype('int')
+    adni.loc[:, 'PTGENDER'] = pd.Categorical(adni_full.PTGENDER)
+    adni.loc[:, 'DX'] = pd.Categorical(adni_full.DX, ordered=True, categories=DX)
+    adni.loc[:, 'DX_bl'] = pd.Categorical(adni_full.DX_bl, ordered=True, categories=DX_bl)
+    adni.loc[:, 'EXAMDATE'] = pd.to_datetime(adni_full['EXAMDATE'])
+    adni.loc[:, 'EXAMDATE_bl'] = pd.to_datetime(adni_full['EXAMDATE_bl'])
+    adni.loc[:, 'PTEDUCAT'] = adni_full.PTEDUCAT.astype('int')
+    adni.loc[:, 'Month'] = adni_full.Month.astype('int')
+    adni.loc[:, 'RID'] = adni_full.RID.astype('int')
 
     # create a list of float data columns, loop and assign float dtypes
     floats = ['AGE', 'CDRSB', 'ADAS11', 'ADAS13', 'MMSE', 'RAVLT_immediate', 'Hippocampus',
@@ -44,7 +44,7 @@ def wrangle_adni():
 
     # loop and assign dtypes
     for i in floats:
-        adni[i] = adni_full[i].astype('float')
+        adni.loc[:, i] = adni_full[i].astype('float')
 
         # age has no baseline '_bl' equivalent
         if i == 'AGE':
@@ -53,7 +53,7 @@ def wrangle_adni():
         # every other column has a '_bl' equivalent to convert as well
         else:    
             y = i + '_bl'
-            adni[y] = adni_full[y].astype('float')
+            adni.loc[:, y] = adni_full[y].astype('float')
 
     # drop columns with too much missing data
     adni.drop(labels=['FDG', 'FDG_bl', 'AV45', 'AV45_bl'], axis='columns', inplace=True)
