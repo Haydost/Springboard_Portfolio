@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Data Wrangling Module for Alzheimer's Capstone 1.
 
-This module returns three dataframes adni_comp, clin_data, and scan_data.
+This module returns three dataframe: adni_comp, clin_data, and scan_data.
 No filename is needed as input. Uses/designed for 'ADNIMERGE.csv' only.
 
 This module is not designed to run with other .csv files.
@@ -9,9 +9,9 @@ Suggested namespace is aw.
 """
 
 def wrangle_adni():
-    """This function returns the two dataframes.
+    """This function returns three dataframes.
 
-    Unpack the two dataframes clin_data and scan_data that are returned.
+    Unpack the dataframes when calling the function.
     """
 
     # ensure pandas availability for the function
@@ -58,55 +58,45 @@ def wrangle_adni():
     # drop columns with too much missing data
     adni.drop(labels=['FDG', 'FDG_bl', 'AV45', 'AV45_bl'], axis='columns', inplace=True)
 
-    # add EXAMDATE to the index
-    adni.set_index([adni.RID, adni.EXAMDATE], inplace=True)
+    # set the index
+    adni.set_index(adni.RID, inplace=True)
 
     # sort the index
     adni.sort_index(inplace=True)
 
     # remove redundant columns
-    adni.drop(['RID', 'EXAMDATE'], axis='columns', inplace=True)
+    adni.drop('RID', axis='columns', inplace=True)
 
-    # drop rows with missing diagnoses
-    adni_dx = adni.dropna(subset=['DX', 'DX_bl'])
-    
     # calculate dynamic age
-    adni_dx.loc[:, 'AGE_dynamic'] = adni_dx.AGE + (adni_dx.Month / 12)
+    adni.loc[:, 'AGE_dynamic'] = adni.AGE + (adni.Month / 12)
     
-    # create dataframe with only patients that have complete scan and clinical data
-    adni_rmv = adni_dx.dropna(how='any')
+    # create dataframe with only patients that have complete data
+    adni_rmv = adni.dropna(how='any')
     
     # filter those results to only patients with multiple visits
     num_comp_exams = adni_rmv.groupby('RID')['EXAMDATE_bl'].count()
     adni_comp_filter = num_comp_exams[num_comp_exams > 1]
     adni_comp = adni_rmv.loc[adni_comp_filter.index]
 
-    # isolate clinical data
-    clinical = pd.DataFrame()
-    clinical = adni_dx.loc[:, ['EXAMDATE_bl', 'Month', 'PTGENDER', 'DX', 'DX_bl', 'PTEDUCAT', 'AGE', 'AGE_dynamic',
-                              'CDRSB', 'CDRSB_bl', 'ADAS11', 'ADAS11_bl', 'ADAS13', 'ADAS13_bl', 'MMSE',
-                              'MMSE_bl', 'RAVLT_immediate', 'RAVLT_immediate_bl']]
+    # map baseline diagnosis categories to match subsequent diagnosis categories
+    # map new column for DX_bl to categorize based on subsequent DX categories
+    # 'SMC' -> 'CN' due to medical definitions
+    # combine 'LMCI' and 'EMCI' into 'MCI'
+    mapper = {'SMC': 'CN', 'LMCI': 'MCI', 'EMCI': 'MCI', 'CN': 'CN', 'AD': 'AD'}
+    adni_comp.loc[:, 'DX_bl2'] = adni_comp.DX_bl.map(mapper)
     
-    # remove rows missing any values
-    clinical_rmv = clinical.dropna(how='any')
-
-    # filter results to patients with multiple visits
-    num_clin_exams = clinical_rmv.groupby('RID')['EXAMDATE_bl'].count()
-    clin_filter = num_clin_exams[num_clin_exams > 1]
-    clin_data = clinical_rmv.loc[clin_filter.index]
+    # isolate clinical data
+    clin_cols = ['EXAMDATE', 'EXAMDATE_bl', 'Month', 'PTGENDER', 'DX', 'DX_bl', 'PTEDUCAT', 'AGE', 'AGE_dynamic',
+                 'CDRSB', 'CDRSB_bl', 'ADAS11', 'ADAS11_bl', 'ADAS13', 'ADAS13_bl', 'MMSE',
+                 'MMSE_bl', 'RAVLT_immediate', 'RAVLT_immediate_bl', 'DX_bl2']
+    clin_data = pd.DataFrame()
+    clin_data = adni.reindex(columns=clin_cols)
 
     # filter the scan data
-    scans = pd.DataFrame()
-    scans = adni_dx.loc[:, ['EXAMDATE_bl', 'Month', 'PTGENDER', 'DX', 'DX_bl', 'PTEDUCAT', 'AGE', 'AGE_dynamic',
-                           'Hippocampus', 'Hippocampus_bl', 'Ventricles', 'Ventricles_bl', 'WholeBrain', 'WholeBrain_bl',
-                           'Entorhinal', 'Entorhinal_bl', 'MidTemp', 'MidTemp_bl', ]]
-
-    # filter for complete rows
-    scans_rmv = scans.dropna(how='any')
-
-    # filter results to patients with multiple visits
-    num_scan_exams = scans_rmv.groupby('RID')['EXAMDATE_bl'].count()
-    scan_filter = num_scan_exams[num_scan_exams > 1]
-    scan_data = scans_rmv.loc[scan_filter.index]
+    scan_cols = ['EXAMDATE', 'EXAMDATE_bl', 'Month', 'PTGENDER', 'DX', 'DX_bl', 'PTEDUCAT', 'AGE', 'AGE_dynamic',
+                 'Hippocampus', 'Hippocampus_bl', 'Ventricles', 'Ventricles_bl', 'WholeBrain', 'WholeBrain_bl',
+                 'Entorhinal', 'Entorhinal_bl', 'MidTemp', 'MidTemp_bl', 'DX_bl2']
+    scan_data = pd.DataFrame()
+    scan_data = adni.reindex(columns=scan_cols)
 
     return adni_comp, clin_data, scan_data
