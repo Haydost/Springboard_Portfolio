@@ -353,6 +353,66 @@ def plot_hist(column, dist_groups, labels, bins):
     plt.legend(loc='best')
     plt.show()
     
+def plot_histdist(column, dist_groups, labels, bins):
+    """This function will create side beside plots of the histograms and distributions
+    similar to the plot_hist and plot_dist functions above.
+    
+    Supply column name, dist_groups, labels, and bins to produce side by side plots.
+    """
+    
+    # set the color sequence (some extras added just in case)
+    colors = ['blue', 'yellow', 'green', 'red', 'orange', 'purple']
+    
+    # set the alpha sequence
+    alphas = [0.6, 0.5, 0.4, 0.2, 0.2, 0.2]
+    
+    # set the subplot
+    plt.rcParams["figure.figsize"] = (14,4)
+    plt.subplot(1, 2, 1)
+    
+    # loop through groups to build the plot
+    for i in range(len(labels)):
+        plt.hist(dist_groups[i][column].values, bins=bins[i], density=True,
+                alpha=alphas[i], color=colors[i], label=labels[i])
+        
+    if column.find('_delta') != -1:
+        plt.xlabel(column[:-6] + ' Change')
+        plt.title('Change in ' + column[:-6] + ': Baseline to Final\nby Change in Diagnosis')
+    elif column.find('_bl') != -1:
+        plt.xlabel('Baseline ' + column[:-3])
+        plt.title('Baseline ' + column[:-3] + '\nby Change in Diagnosis')
+    else:
+        plt.xlabel(column + ' Values')
+        plt.title(column + ' Distribution by Final Diagnosis')
+    plt.ylabel('Probability Density')
+    plt.legend(loc='best')
+    
+    # change the subplot
+    plt.subplot(1, 2, 2)
+    
+    # loop through groups to build the plot
+    for i in range(len(labels)):
+        sns.distplot(dist_groups[i][column].values, hist=False, label=labels[i])
+
+    # format labels and legend
+    plt.ylabel('Kernel Density Estimate')
+    if column.find('_delta') != -1:
+        plt.xlabel(column[:-6] + ' Change')
+        plt.title(column[:-6] + ' Change by Change in Diagnosis')
+    elif column.find('_bl') != -1:
+        plt.xlabel('Baseline ' + column[:-3])
+        plt.title('Baseline ' + column[:-3] + '\nby Change in Diagnosis')
+    else:
+        plt.xlabel(column)
+        plt.title(column + ' by Change in Diagnosis')
+    plt.legend(loc='best')
+    
+    plt.tight_layout()
+    plt.subplots_adjust(top=1.2, wspace=0.2)
+    
+    # show the plot
+    plt.show()
+    
 def setup_indicators(final_exam):
     """This function sets up the data needed to run plot_bl_indicators function.
     
@@ -409,8 +469,8 @@ def plot_indicators(column1, si, column2=''):
     plt.hist(mci_f[column1], bins=mci_f_bins, density=True, alpha=0.3, color='green', label='MCI')
     plt.hist(ad_f[column1], bins=ad_f_bins, density=True, alpha=0.3, color='red', label='AD')
     if column1.find('_bl') != -1:
-        plt.xlabel('Baseline ' + column1)
-        plt.title('Female Baseline ' + column1 + ' Score\nSeparated by Final Diagnosis')
+        plt.xlabel('Baseline ' + column1[:-3])
+        plt.title('Female Baseline ' + column1[:-3] + ' Score\nSeparated by Final Diagnosis')
     else:
         plt.xlabel(column1)
         plt.title('Female ' + column1 + ' Score\nSeparated by Final Diagnosis')
@@ -423,8 +483,8 @@ def plot_indicators(column1, si, column2=''):
         plt.hist(mci_f[column2], bins=mci_f_bins, density=True, alpha=0.3, color='green', label='MCI')
         plt.hist(ad_f[column2], bins=ad_f_bins, density=True, alpha=0.3, color='red', label='AD')
         if column2.find('_bl') != -1:
-            plt.xlabel('Baseline ' + column2)
-            plt.title('Female Baseline ' + column2 + ' Score\nSeparated by Final Diagnosis')
+            plt.xlabel('Baseline ' + column2[:-3])
+            plt.title('Female Baseline ' + column2[:-3] + ' Score\nSeparated by Final Diagnosis')
         else:
             plt.xlabel(column2)
             plt.title('Female ' + column2 + ' Score\nSeparated by Final Diagnosis')
@@ -439,8 +499,8 @@ def plot_indicators(column1, si, column2=''):
     plt.hist(mci_m[column1], bins=mci_m_bins, density=True, alpha=0.3, color='green', label='MCI')
     plt.hist(ad_m[column1], bins=ad_m_bins, density=True, alpha=0.3, color='red', label='AD')
     if column1.find('_bl') != -1:
-        plt.xlabel('Baseline ' + column1)
-        plt.title('Male Baseline ' + column1 + ' Score\nSeparated by Final Diagnosis')
+        plt.xlabel('Baseline ' + column1[:-3])
+        plt.title('Male Baseline ' + column1[:-3] + ' Score\nSeparated by Final Diagnosis')
     else:
         plt.xlabel(column1)
         plt.title('Male ' + column1 + ' Score\nSeparated by Final Diagnosis')
@@ -453,8 +513,8 @@ def plot_indicators(column1, si, column2=''):
         plt.hist(mci_m[column2], bins=mci_m_bins, density=True, alpha=0.3, color='green', label='MCI')
         plt.hist(ad_m[column2], bins=ad_m_bins, density=True, alpha=0.3, color='red', label='AD')
         if column2.find('_bl') != -1:
-            plt.xlabel('Baseline ' + column2)
-            plt.title('Male Baseline ' + column2 + ' Score\nSeparated by Final Diagnosis')
+            plt.xlabel('Baseline ' + column2[:-3])
+            plt.title('Male Baseline ' + column2[:-3] + ' Score\nSeparated by Final Diagnosis')
         else:
             plt.xlabel(column2)
             plt.title('Male ' + column2 + ' Score\nSeparated by Final Diagnosis')
@@ -465,3 +525,53 @@ def plot_indicators(column1, si, column2=''):
     plt.subplots_adjust(top=1.2)
     
     plt.show()
+    
+def summarize_bl_thresholds(final_exam, column, gender, threshold):
+    """This function provides some summary information about the number of patients with 
+    certain threshold values were diagnosed with Alzheimer's disease.
+    
+    Provide the final_exam dataframe, baseline column, patient gender, and threshold value to check.
+    """
+    
+    # ensure to search the correct side of the threshold values        
+    if column in ['Hippocampus_bl', 'Hippocampus', 'MidTemp', 'MidTemp_bl', 'WholeBrain', 'WholeBrain_bl',
+                 'Entorhinal', 'Entorhinal_bl']:
+        
+        # calculate the number of patients at threshold that ended up with AD
+        end_ad = final_exam[(final_exam.DX == 'AD') & (final_exam.PTGENDER == gender) 
+                            & (final_exam[column] <= threshold)].shape[0]
+        
+        # calcualte the number of patients below the threshold that already had AD diagnosis
+        had_ad = final_exam[(final_exam[column] <= threshold) & (final_exam.PTGENDER == gender) 
+                            & (final_exam.DX_bl2 == 'AD')].shape[0]
+        
+        # calculate the number of patients below threshold that didn't already have AD
+        not_ad = final_exam[(final_exam[column] <= threshold) & (final_exam.PTGENDER == gender) 
+                            & (final_exam.DX_bl2 != 'AD')].shape[0]
+    
+    else:
+        
+        # calculate the number of patients at threshold that ended up with AD
+        end_ad = final_exam[(final_exam.DX == 'AD') & (final_exam.PTGENDER == gender) 
+                            & (final_exam[column] >= threshold)].shape[0]
+        
+        # calcualte the number of patients above the threshold that already had AD diagnosis
+        had_ad = final_exam[(final_exam[column] >= threshold) & (final_exam.PTGENDER == gender) 
+                            & (final_exam.DX_bl2 == 'AD')].shape[0]
+        
+        # calculate the number of patients above threshold that didn't already have AD
+        not_ad = final_exam[(final_exam[column] >= threshold) & (final_exam.PTGENDER == gender) 
+                            & (final_exam.DX_bl2 != 'AD')].shape[0]
+        
+    # calculate the numbers and percentages of patients that show predictive power
+    got_ad = end_ad - had_ad
+        
+    # calculate the percentage that didn't have AD that were later diagnosed AD
+    per_ad = round((got_ad / not_ad * 100), 2)
+    
+    str1 = ' patients had baseline ' + column + ' values exceeding the threshold of '
+    str2 = '% of patients that didn\'t have AD yet but had '
+        
+    print(str(got_ad) + ' of ' + str(not_ad) + str1 + str(threshold) + ' and ended with AD.')
+    print(str(per_ad) + str2 + column + ' exceeding threshold value of ' + str(threshold) + ' ended with AD.')
+        
