@@ -23,23 +23,23 @@ if 'sns' not in globals():
     
 sns.set()
 
-def get_deltadx_groups():
-    """This function uses the final_exam dataframe to divide the data by diagnosis change.
+def get_deltadx_groups(df):
+    """This function uses the supplied dataframe to divide the data by diagnosis change.
     
     The groups returned by this function are no_change, cn_mci, mci_ad, and cn_ad.
     """
     
     # isolate patients with no diagnosis change
-    no_change = final_exam[final_exam['DX'] == final_exam['DX_bl2']]
+    no_change = df[df['DX'] == df['DX_bl2']]
     
     # isolate patients who progressed from 'CN' to 'AD'
-    cn_mci = final_exam[(final_exam['DX'] == 'MCI') & (final_exam['DX_bl2'] == 'CN')]
+    cn_mci = df[(df['DX'] == 'MCI') & (df['DX_bl2'] == 'CN')]
     
     # isolate patients who progressed from 'MCI' to 'AD'
-    mci_ad = final_exam[(final_exam['DX'] == 'AD') & (final_exam['DX_bl2'] == 'MCI')]
+    mci_ad = df[(df['DX'] == 'AD') & (df['DX_bl2'] == 'MCI')]
     
     # isolate patients who progressed from 'CN' to 'AD'
-    cn_ad = final_exam[(final_exam['DX'] == 'AD') & (final_exam['DX_bl2'] == 'CN')]
+    cn_ad = df[(df['DX'] == 'AD') & (df['DX_bl2'] == 'CN')]
     
     return no_change, cn_mci, mci_ad, cn_ad
 
@@ -72,7 +72,6 @@ def test_gender_effect(df, biomarker, size):
 
     # get counts of the number of males and females
     num_males = df.PTGENDER.value_counts()['Male']
-    num_females = df.PTGENDER.value_counts()['Female']
     
     # calculate the observed mean difference
     obs_mean_diff = np.mean(fe_males[biomarker]) - np.mean(fe_females[biomarker])
@@ -87,8 +86,18 @@ def test_gender_effect(df, biomarker, size):
         null_arr2 = r_arr[num_males:]
         perm_mean_diffs[i] = np.mean(null_arr1) - np.mean(null_arr2)
     
+    # uncomment to quickly view the distribution
+    _ = plt.hist(perm_mean_diffs, density=True, color='blue', label='Perms')
+    _ = plt.axvline(obs_mean_diff, color='C1')
+    _ = plt.title('Probability Distribution for Mean Differences\nBetween Genders for ' + biomarker)
+    _ = plt.xlabel('Mean Difference Between Males/Females')
+    _ = plt.ylabel('Probability Density')
+    
     # calculate and display p value
-    p = np.sum(perm_mean_diffs >= obs_mean_diff) / len(perm_mean_diffs)
+    if obs_mean_diff > np.mean(perm_mean_diffs):
+        p = np.sum(perm_mean_diffs >= obs_mean_diff) / len(perm_mean_diffs)
+    else:
+        p = np.sum(perm_mean_diffs <= obs_mean_diff) / len(perm_mean_diffs)
     print('Distribution Test for Males/Females')
     print('Variable: ', biomarker)
     print('If p < 0.05, then split the data by gender')
