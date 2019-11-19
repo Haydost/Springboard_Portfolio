@@ -63,23 +63,23 @@ def test_gender_deltas(df, biomarker):
     together.
     """
     
-    # get all of the data in a numpy array
-    comb_arr = np.array(df[biomarker])
+    # create a combined array for the biomarker
+    c_arr = np.array(df[biomarker])
     
-    # mix the values in a random order
-    rand_arr = np.random.permutation(comb_arr)
+    # divide the data by gender
+    fe_males = df[df.PTGENDER == 'Male']
+    fe_females = df[df.PTGENDER == 'Female']
+
+    # get counts of the number of males and females
+    num_males = df.PTGENDER.value_counts()['Male']
+    num_females = df.PTGENDER.value_counts()['Female']
     
-    # create two arrays the same size as the male and female arrays
-    null_arr1 = rand_arr[:len(df[df.PTGENDER == 'Male'])]
-    null_arr2 = rand_arr[len(df[df.PTGENDER == 'Female']):]
-    
-    # get means
-    comb_mean = np.mean(comb_arr)
-    null_mean1 = np.mean(null_arr1)
-    null_mean2 = np.mean(null_arr2)
+    # calculate the observed mean difference
+    obs_mean_diff = np.mean(fe_males[biomarker]) - np.mean(fe_females[biomarker])
+    perm_mean_diffs = np.empty(1000)
     
     # calculate and display p value
-    p = np.sum(comb_mean >= abs(null_mean1 - null_mean2)) / len(comb_arr)
+
     print('Distribution Test for Males/Females')
     print('Variable: ', biomarker)
     print('If p < 0.05, then split the data by gender')

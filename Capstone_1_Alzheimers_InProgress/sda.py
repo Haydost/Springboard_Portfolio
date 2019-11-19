@@ -54,39 +54,41 @@ def divide_genders(df):
     
     return males, females
 
-def test_gender_deltas(df, biomarker):
+def test_gender_effect(df, biomarker, size):
     """This function returns the p value for the test that males/females have the 
     
-    same distribution for the change in the supplied biomarker. A significant p value
-    means that males/females should be separated for further analysis of change in 
-    in the supplied biomarker. A high p value means males/females can be considered 
-    together.
+    same distribution for the change in the supplied biomarker. The test will be 
+    performed over 'size' permutations. A significant p value means that males/females 
+    should be separated for further analysis of change in in the supplied biomarker. 
+    A high p value means males/females can be considered together.
     """
     
-    # get all of the data in a numpy array
-    comb_arr = np.array(df[biomarker])
+    # create a combined array for the biomarker
+    c_arr = np.array(df[biomarker])
     
-    # calculate the mean of the entire array
-    comb_mean = np.mean(comb_arr)
+    # divide the data by gender
+    fe_males = df[df.PTGENDER == 'Male']
+    fe_females = df[df.PTGENDER == 'Female']
+
+    # get counts of the number of males and females
+    num_males = df.PTGENDER.value_counts()['Male']
+    num_females = df.PTGENDER.value_counts()['Female']
     
-    # initialize empty arrays for mean calculations
-    null_means1 = np.empty(10000)
-    null_means2 = np.empty(10000)
+    # calculate the observed mean difference
+    obs_mean_diff = np.mean(fe_males[biomarker]) - np.mean(fe_females[biomarker])
     
-    for i in range(10000):
-        # mix the values in a random order
-        rand_arr = np.random.permutation(comb_arr)
-        
-        # create two arrays the same size as the male and female arrays
-        null_arr1 = rand_arr[:len(df[df.PTGENDER == 'Male'])]
-        null_arr2 = rand_arr[len(df[df.PTGENDER == 'Female']):]
-        
-        # get means and add to array
-        null_means1[i] = np.mean(null_arr1)
-        null_means2[i] = np.mean(null_arr2)
+    # initialize empty numpy array
+    perm_mean_diffs = np.empty(size)
+    
+    # run the permutations calculating means each time
+    for i in range(size):
+        r_arr = np.random.permutation(c_arr)
+        null_arr1 = r_arr[:num_males]
+        null_arr2 = r_arr[num_males:]
+        perm_mean_diffs[i] = np.mean(null_arr1) - np.mean(null_arr2)
     
     # calculate and display p value
-    p = np.sum(comb_mean >= abs(np.mean(null_means1) - np.mean(null_means2))) / len(comb_arr)
+    p = np.sum(perm_mean_diffs >= obs_mean_diff) / len(perm_mean_diffs)
     print('Distribution Test for Males/Females')
     print('Variable: ', biomarker)
     print('If p < 0.05, then split the data by gender')
