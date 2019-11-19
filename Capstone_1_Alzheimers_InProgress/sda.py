@@ -102,3 +102,98 @@ def test_gender_effect(df, biomarker, size):
     print('Variable: ', biomarker)
     print('If p < 0.05, then split the data by gender')
     print('p-value: ', p)
+    
+def bs(df, biomarker, size):
+    """This function generates and plots a bootstrap distribution.
+    
+    Supply the dataframe, biomarker, and number of samples to take for each distribution.
+    This function returns the 95% confidence interval and plots the distribution.
+    """
+    
+    # create the bootstrap distribution
+    bs_df = pd.DataFrame({biomarker: [np.mean(np.random.choice(df[biomarker], 
+                                                                size=len(df))) for i in range(size)]})
+    
+    # calculate and display the 95% confidence interval
+    lower = bs_df[biomarker].quantile(0.025)
+    upper = bs_df[biomarker].quantile(0.975)
+    print('95% Confidence Interval: ', lower, ' to ', upper)
+    
+    # create and display histogram of the bootstrap distribution
+    _ = bs_df[biomarker].hist(histtype='step')
+    _ = plt.axvline(lower, color='C1', linewidth=1)
+    _ = plt.axvline(upper, color='C1', linewidth=1)
+    _ = plt.title('Bootstrap Estimate around the Mean for ' + biomarker)
+    _ = plt.xlabel('Resampled Mean ' + biomarker)
+    _ = plt.ylabel('Frequency')
+    
+    if abs(upper) > abs(lower):
+        return upper
+    else:
+        return lower
+    
+def eval_bs(fe, df, biomarker, conf, gender='both'):
+    """Calculate percentages of patients with a change in diagnosis that had
+    
+    a change in the biomarker larger than the threshold value identified from
+    bootstrap analysis. You must supply the full final_exam dataframe.
+    Supply the no change dataframe, the biomarker of interest,
+    the confidence level to evaluate, and provide optional gender of male/female.
+    """
+    
+    # isolate patients who progressed from 'CN' to 'AD'
+    cn_mci = fe[(fe['DX'] == 'MCI') & (fe['DX_bl2'] == 'CN')]
+    
+    # isolate patients who progressed from 'MCI' to 'AD'
+    mci_ad = fe[(fe['DX'] == 'AD') & (fe['DX_bl2'] == 'MCI')]
+    
+    # isolate patients who progressed from 'CN' to 'AD'
+    cn_ad = fe[(fe['DX'] == 'AD') & (fe['DX_bl2'] == 'CN')]
+    
+    if gender == 'both':
+        if conf > 0:
+            print('Pct of CN with change more than threshold: ', 
+                  len(fe[(fe['DX'] == 'CN') & (fe[biomarker] > conf)]) / len(fe['DX'] == 'CN'))
+            print('CN to MCI: ', len(cn_mci[cn_mci[biomarker] > conf]) / len(cn_mci))
+            print('MCI to AD: ', len(mci_ad[mci_ad[biomarker] > conf]) / len(mci_ad))
+            print('CN to AD: ', len(cn_ad[cn_ad[biomarker] > conf]) / len(cn_ad))
+        else:
+            print('Pct of CN with change more than threshold: ', 
+                  len(fe[(fe['DX'] == 'CN') & (fe[biomarker] < conf)]) / len(fe['DX'] == 'CN'))
+            print('CN to MCI: ', len(cn_mci[cn_mci[biomarker] < conf]) / len(cn_mci))
+            print('MCI to AD: ', len(mci_ad[mci_ad[biomarker] < conf]) / len(mci_ad))
+            print('CN to AD: ', len(cn_ad[cn_ad[biomarker] < conf]) / len(cn_ad))
+    elif gender == 'males':
+        m_cn_mci = cn_mci[cn_mci.PTGENDER == 'Male']
+        m_mci_ad = mci_ad[mci_ad.PTGENDER == 'Male']
+        m_cn_ad = cn_ad[cn_ad.PTGENDER == 'Male']
+        m = fe[fe['PTGENDER'] == 'Male']
+        if conf > 0:
+            print('Pct of CN with change more than threshold: ', 
+                  len(m[(m['DX'] == 'CN') & (m[biomarker] > conf)]) / len(m['DX'] == 'CN'))
+            print('CN to MCI: ', len(m_cn_mci[m_cn_mci[biomarker] > conf]) / len(m_cn_mci))
+            print('MCI to AD: ', len(m_mci_ad[m_mci_ad[biomarker] > conf]) / len(m_mci_ad))
+            print('CN to AD: ', len(m_cn_ad[m_cn_ad[biomarker] > conf]) / len(m_cn_ad))
+        else:
+            print('Pct of CN with change more than threshold: ', 
+                  len(m[(m['DX'] == 'CN') & (m[biomarker] < conf)]) / len(m['DX'] == 'CN'))
+            print('CN to MCI: ', len(m_cn_mci[m_cn_mci[biomarker] < conf]) / len(m_cn_mci))
+            print('MCI to AD: ', len(m_mci_ad[m_mci_ad[biomarker] < conf]) / len(m_mci_ad))
+            print('CN to AD: ', len(m_cn_ad[m_cn_ad[biomarker] < conf]) / len(m_cn_ad))
+    else:
+        f_cn_mci = cn_mci[cn_mci.PTGENDER == 'Female']
+        f_mci_ad = mci_ad[mci_ad.PTGENDER == 'Female']
+        f_cn_ad = cn_ad[cn_ad.PTGENDER == 'Female']
+        f = fe[fe['PTGENDER'] == 'Female']
+        if conf > 0:
+            print('Pct of CN with change more than threshold: ', 
+                  len(f[(f['DX'] == 'CN') & (f[biomarker] > conf)]) / len(f['DX'] == 'CN'))
+            print('CN to MCI: ', len(f_cn_mci[f_cn_mci[biomarker] > conf]) / len(f_cn_mci))
+            print('MCI to AD: ', len(f_mci_ad[f_mci_ad[biomarker] > conf]) / len(f_mci_ad))
+            print('CN to AD: ', len(f_cn_ad[f_cn_ad[biomarker] > conf]) / len(f_cn_ad))
+        else:
+            print('Pct of CN with change more than threshold: ', 
+                  len(f[(f['DX'] == 'CN') & (f[biomarker] < conf)]) / len(f['DX'] == 'CN'))
+            print('CN to MCI: ', len(f_cn_mci[f_cn_mci[biomarker] < conf]) / len(f_cn_mci))
+            print('MCI to AD: ', len(f_mci_ad[f_mci_ad[biomarker] < conf]) / len(f_mci_ad))
+            print('CN to AD: ', len(f_cn_ad[f_cn_ad[biomarker] < conf]) / len(f_cn_ad))
