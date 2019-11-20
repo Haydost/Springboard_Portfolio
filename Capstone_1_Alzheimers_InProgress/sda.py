@@ -132,9 +132,11 @@ def bs(df, biomarker, size):
     else:
         return lower
     
-def eval_bs(fe, biomarker, conf, gender='both'):
-    """Calculate percentages of patients with a change in diagnosis that had
+def old_eval_bs(fe, biomarker, conf, gender='both'):
+    """Old function. Code unsuccint. Created new version following DRY.
     
+    Saving this old code because never delete anything that works.
+    Calculate percentages of patients with a change in diagnosis that had
     a change in the biomarker larger than the threshold value identified from
     bootstrap analysis. You must supply the full final_exam dataframe, the biomarker 
     of interest, the confidence level to evaluate, and provide optional gender of male/female.
@@ -202,6 +204,63 @@ def eval_bs(fe, biomarker, conf, gender='both'):
             prog_CN_MCI = len(f_cn_mci[f_cn_mci[biomarker] < conf]) / len(f_cn_mci)
             prog_MCI_AD = len(f_mci_ad[f_mci_ad[biomarker] < conf]) / len(f_mci_ad)
             prog_CN_AD = len(f_cn_ad[f_cn_ad[biomarker] < conf]) / len(f_cn_ad)
+
+    # print results
+    print('Percent exceeding threshold that ended CN: ', round(end_CN*100,2), '%')
+    print('Percent exceeding threshold that ended MCI: ', round(end_MCI*100,2), '%')
+    print('Percent exceeding threshold that ended AD: ', round(end_AD*100,2), '%')
+    print('Percent progressing CN to MCI exceeding threshold: ', round(prog_CN_MCI*100,2), '%')
+    print('Percent Progressing MCI to AD exceeding threshold: ', round(prog_MCI_AD*100,2), '%')
+    print('Percent Progressing CN to AD exceeding threshold: ', round(prog_CN_AD*100,2), '%')
+    
+def eval_bs(fe, biomarker, conf, gender='both'):
+    """Calculate percentages of patients with a change in diagnosis that had
+    
+    a change in the biomarker larger than the threshold value identified from
+    bootstrap analysis. You must supply the full final_exam dataframe, the biomarker 
+    of interest, the confidence level to evaluate, and provide optional gender of male/female.
+    """
+    
+    # isolate patients who progressed from 'CN' to 'AD'
+    cn_mci = fe[(fe['DX'] == 'MCI') & (fe['DX_bl2'] == 'CN')]
+    
+    # isolate patients who progressed from 'MCI' to 'AD'
+    mci_ad = fe[(fe['DX'] == 'AD') & (fe['DX_bl2'] == 'MCI')]
+    
+    # isolate patients who progressed from 'CN' to 'AD'
+    cn_ad = fe[(fe['DX'] == 'AD') & (fe['DX_bl2'] == 'CN')]
+    
+    if gender == 'both':
+        df = fe
+        df2 = cn_mci
+        df3 = mci_ad
+        df4 = cn_ad
+    elif gender == 'males':
+        df = fe[fe['PTGENDER'] == 'Male']
+        df2 = cn_mci[cn_mci.PTGENDER == 'Male']
+        df3 = mci_ad[mci_ad.PTGENDER == 'Male']
+        df4 = cn_ad[cn_ad.PTGENDER == 'Male']
+    else:
+        df = fe[fe['PTGENDER'] == 'Female']
+        df2 = cn_mci[cn_mci.PTGENDER == 'Female']
+        df3 = mci_ad[mci_ad.PTGENDER == 'Female']
+        df4 = cn_ad[cn_ad.PTGENDER == 'Female']
+        
+    # use correct comparison depending on biomarker increase vs. decrease    
+    if conf > 0:
+        end_CN = len(df[(df['DX'] == 'CN') & (df[biomarker] > conf)]) / len(df[df[biomarker] > conf])
+        end_MCI = len(df[(df['DX'] == 'MCI') & (df[biomarker] > conf)]) / len(df[df[biomarker] > conf])
+        end_AD = len(df[(df['DX'] == 'AD') & (df[biomarker] > conf)]) / len(df[df[biomarker] > conf])     
+        prog_CN_MCI = len(df2[df2[biomarker] > conf]) / len(df2)
+        prog_MCI_AD = len(df3[df3[biomarker] > conf]) / len(df3)
+        prog_CN_AD = len(df4[df4[biomarker] > conf]) / len(df4)
+    else:
+        end_CN = len(df[(df['DX'] == 'CN') & (df[biomarker] < conf)]) / len(df[df[biomarker] < conf])
+        end_MCI = len(df[(df['DX'] == 'MCI') & (df[biomarker] < conf)]) / len(df[df[biomarker] < conf])
+        end_AD = len(df[(df['DX'] == 'AD') & (df[biomarker] < conf)]) / len(df[df[biomarker] < conf])     
+        prog_CN_MCI = len(df2[df2[biomarker] < conf]) / len(df2)
+        prog_MCI_AD = len(df3[df3[biomarker] < conf]) / len(df3)
+        prog_CN_AD = len(df4[df4[biomarker] < conf]) / len(df4)
 
     # print results
     print('Percent exceeding threshold that ended CN: ', round(end_CN*100,2), '%')
