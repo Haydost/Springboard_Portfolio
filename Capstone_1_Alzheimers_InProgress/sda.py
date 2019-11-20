@@ -123,7 +123,7 @@ def bs(df, biomarker, size):
     _ = bs_df[biomarker].hist(histtype='step')
     _ = plt.axvline(lower, color='C1', linewidth=1)
     _ = plt.axvline(upper, color='C1', linewidth=1)
-    _ = plt.title('Bootstrap Estimate around the Mean for ' + biomarker)
+    _ = plt.title('Bootstrap Estimate around the Mean for ' + biomarker + '\nNo Diagnosis Change')
     _ = plt.xlabel('Resampled Mean ' + biomarker)
     _ = plt.ylabel('Frequency')
     
@@ -132,13 +132,12 @@ def bs(df, biomarker, size):
     else:
         return lower
     
-def eval_bs(fe, df, biomarker, conf, gender='both'):
+def eval_bs(fe, biomarker, conf, gender='both'):
     """Calculate percentages of patients with a change in diagnosis that had
     
     a change in the biomarker larger than the threshold value identified from
-    bootstrap analysis. You must supply the full final_exam dataframe.
-    Supply the no change dataframe, the biomarker of interest,
-    the confidence level to evaluate, and provide optional gender of male/female.
+    bootstrap analysis. You must supply the full final_exam dataframe, the biomarker 
+    of interest, the confidence level to evaluate, and provide optional gender of male/female.
     """
     
     # isolate patients who progressed from 'CN' to 'AD'
@@ -152,48 +151,62 @@ def eval_bs(fe, df, biomarker, conf, gender='both'):
     
     if gender == 'both':
         if conf > 0:
-            print('Pct of CN with change more than threshold: ', 
-                  len(fe[(fe['DX'] == 'CN') & (fe[biomarker] > conf)]) / len(fe['DX'] == 'CN'))
-            print('CN to MCI: ', len(cn_mci[cn_mci[biomarker] > conf]) / len(cn_mci))
-            print('MCI to AD: ', len(mci_ad[mci_ad[biomarker] > conf]) / len(mci_ad))
-            print('CN to AD: ', len(cn_ad[cn_ad[biomarker] > conf]) / len(cn_ad))
+            end_CN = len(fe[(fe['DX'] == 'CN') & (fe[biomarker] > conf)]) / len(fe[fe[biomarker] > conf])
+            end_MCI = len(fe[(fe['DX'] == 'MCI') & (fe[biomarker] > conf)]) / len(fe[fe[biomarker] > conf])
+            end_AD = len(fe[(fe['DX'] == 'AD') & (fe[biomarker] > conf)]) / len(fe[fe[biomarker] > conf])     
+            prog_CN_MCI = len(cn_mci[cn_mci[biomarker] > conf]) / len(cn_mci)
+            prog_MCI_AD = len(mci_ad[mci_ad[biomarker] > conf]) / len(mci_ad)
+            prog_CN_AD = len(cn_ad[cn_ad[biomarker] > conf]) / len(cn_ad)
         else:
-            print('Pct of CN with change more than threshold: ', 
-                  len(fe[(fe['DX'] == 'CN') & (fe[biomarker] < conf)]) / len(fe['DX'] == 'CN'))
-            print('CN to MCI: ', len(cn_mci[cn_mci[biomarker] < conf]) / len(cn_mci))
-            print('MCI to AD: ', len(mci_ad[mci_ad[biomarker] < conf]) / len(mci_ad))
-            print('CN to AD: ', len(cn_ad[cn_ad[biomarker] < conf]) / len(cn_ad))
+            end_CN = len(fe[(fe['DX'] == 'CN') & (fe[biomarker] < conf)]) / len(fe[fe[biomarker] < conf])
+            end_MCI = len(fe[(fe['DX'] == 'MCI') & (fe[biomarker] < conf)]) / len(fe[fe[biomarker] < conf])
+            end_AD = len(fe[(fe['DX'] == 'AD') & (fe[biomarker] < conf)]) / len(fe[fe[biomarker] < conf])
+            prog_CN_MCI = len(cn_mci[cn_mci[biomarker] < conf]) / len(cn_mci)
+            prog_MCI_AD = len(mci_ad[mci_ad[biomarker] < conf]) / len(mci_ad)
+            prog_CN_AD = len(cn_ad[cn_ad[biomarker] < conf]) / len(cn_ad)
     elif gender == 'males':
         m_cn_mci = cn_mci[cn_mci.PTGENDER == 'Male']
         m_mci_ad = mci_ad[mci_ad.PTGENDER == 'Male']
         m_cn_ad = cn_ad[cn_ad.PTGENDER == 'Male']
         m = fe[fe['PTGENDER'] == 'Male']
         if conf > 0:
-            print('Pct of CN with change more than threshold: ', 
-                  len(m[(m['DX'] == 'CN') & (m[biomarker] > conf)]) / len(m['DX'] == 'CN'))
-            print('CN to MCI: ', len(m_cn_mci[m_cn_mci[biomarker] > conf]) / len(m_cn_mci))
-            print('MCI to AD: ', len(m_mci_ad[m_mci_ad[biomarker] > conf]) / len(m_mci_ad))
-            print('CN to AD: ', len(m_cn_ad[m_cn_ad[biomarker] > conf]) / len(m_cn_ad))
+            end_CN = len(m[(m['DX'] == 'CN') & (m[biomarker] > conf)]) / len(m[m[biomarker] > conf])
+            end_MCI = len(m[(m['DX'] == 'MCI') & (m[biomarker] > conf)]) / len(m[m[biomarker] > conf])
+            end_AD = len(m[(m['DX'] == 'AD') & (m[biomarker] > conf)]) / len(m[m[biomarker] > conf])     
+            prog_CN_MCI = len(m_cn_mci[m_cn_mci[biomarker] > conf]) / len(m_cn_mci)
+            prog_MCI_AD = len(m_mci_ad[m_mci_ad[biomarker] > conf]) / len(m_mci_ad)
+            prog_CN_AD = len(m_cn_ad[m_cn_ad[biomarker] > conf]) / len(m_cn_ad)
         else:
-            print('Pct of CN with change more than threshold: ', 
-                  len(m[(m['DX'] == 'CN') & (m[biomarker] < conf)]) / len(m['DX'] == 'CN'))
-            print('CN to MCI: ', len(m_cn_mci[m_cn_mci[biomarker] < conf]) / len(m_cn_mci))
-            print('MCI to AD: ', len(m_mci_ad[m_mci_ad[biomarker] < conf]) / len(m_mci_ad))
-            print('CN to AD: ', len(m_cn_ad[m_cn_ad[biomarker] < conf]) / len(m_cn_ad))
+            end_CN = len(m[(m['DX'] == 'CN') & (m[biomarker] < conf)]) / len(m[m[biomarker] < conf])
+            end_MCI = len(m[(m['DX'] == 'MCI') & (m[biomarker] < conf)]) / len(m[m[biomarker] < conf])
+            end_AD = len(m[(m['DX'] == 'AD') & (m[biomarker] < conf)]) / len(m[m[biomarker] < conf]) 
+            prog_CN_MCI = len(m_cn_mci[m_cn_mci[biomarker] < conf]) / len(m_cn_mci)
+            prog_MCI_AD = len(m_mci_ad[m_mci_ad[biomarker] < conf]) / len(m_mci_ad)
+            prog_CN_AD = len(m_cn_ad[m_cn_ad[biomarker] < conf]) / len(m_cn_ad)
     else:
         f_cn_mci = cn_mci[cn_mci.PTGENDER == 'Female']
         f_mci_ad = mci_ad[mci_ad.PTGENDER == 'Female']
         f_cn_ad = cn_ad[cn_ad.PTGENDER == 'Female']
         f = fe[fe['PTGENDER'] == 'Female']
         if conf > 0:
-            print('Pct of CN with change more than threshold: ', 
-                  len(f[(f['DX'] == 'CN') & (f[biomarker] > conf)]) / len(f['DX'] == 'CN'))
-            print('CN to MCI: ', len(f_cn_mci[f_cn_mci[biomarker] > conf]) / len(f_cn_mci))
-            print('MCI to AD: ', len(f_mci_ad[f_mci_ad[biomarker] > conf]) / len(f_mci_ad))
-            print('CN to AD: ', len(f_cn_ad[f_cn_ad[biomarker] > conf]) / len(f_cn_ad))
+            end_CN = len(f[(f['DX'] == 'CN') & (f[biomarker] > conf)]) / len(f[f[biomarker] > conf])
+            end_MCI = len(f[(f['DX'] == 'MCI') & (f[biomarker] > conf)]) / len(f[f[biomarker] > conf])
+            end_AD = len(f[(f['DX'] == 'AD') & (f[biomarker] > conf)]) / len(f[f[biomarker] > conf])
+            prog_CN_MCI = len(f_cn_mci[f_cn_mci[biomarker] > conf]) / len(f_cn_mci)
+            prog_MCI_AD = len(f_mci_ad[f_mci_ad[biomarker] > conf]) / len(f_mci_ad)
+            prog_CN_AD = len(f_cn_ad[f_cn_ad[biomarker] > conf]) / len(f_cn_ad)
         else:
-            print('Pct of CN with change more than threshold: ', 
-                  len(f[(f['DX'] == 'CN') & (f[biomarker] < conf)]) / len(f['DX'] == 'CN'))
-            print('CN to MCI: ', len(f_cn_mci[f_cn_mci[biomarker] < conf]) / len(f_cn_mci))
-            print('MCI to AD: ', len(f_mci_ad[f_mci_ad[biomarker] < conf]) / len(f_mci_ad))
-            print('CN to AD: ', len(f_cn_ad[f_cn_ad[biomarker] < conf]) / len(f_cn_ad))
+            end_CN = len(f[(f['DX'] == 'CN') & (f[biomarker] < conf)]) / len(f[f[biomarker] < conf])
+            end_MCI = len(f[(f['DX'] == 'MCI') & (f[biomarker] < conf)]) / len(f[f[biomarker] < conf])
+            end_AD = len(f[(f['DX'] == 'AD') & (f[biomarker] < conf)]) / len(f[f[biomarker] < conf])
+            prog_CN_MCI = len(f_cn_mci[f_cn_mci[biomarker] < conf]) / len(f_cn_mci)
+            prog_MCI_AD = len(f_mci_ad[f_mci_ad[biomarker] < conf]) / len(f_mci_ad)
+            prog_CN_AD = len(f_cn_ad[f_cn_ad[biomarker] < conf]) / len(f_cn_ad)
+
+    # print results
+    print('Percent exceeding threshold that ended CN: ', round(end_CN*100,2), '%')
+    print('Percent exceeding threshold that ended MCI: ', round(end_MCI*100,2), '%')
+    print('Percent exceeding threshold that ended AD: ', round(end_AD*100,2), '%')
+    print('Percent progressing CN to MCI exceeding threshold: ', round(prog_CN_MCI*100,2), '%')
+    print('Percent Progressing MCI to AD exceeding threshold: ', round(prog_MCI_AD*100,2), '%')
+    print('Percent Progressing CN to AD exceeding threshold: ', round(prog_CN_AD*100,2), '%')
