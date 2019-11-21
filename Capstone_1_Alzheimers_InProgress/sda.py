@@ -21,6 +21,9 @@ if 'plt' not in globals():
 if 'sns' not in globals():
     import seaborn as sns
     
+if 'scipy.stats' not in globals():
+    import scipy.stats
+    
 sns.set()
 
 def get_deltadx_groups(df):
@@ -323,3 +326,189 @@ def bl_perm_test(fe, biomarker, gender, size):
     print('Variable: ', biomarker)
     print('If p < 0.05, then patients that ended AD had a different distribution for ', biomarker)
     print('p-value: ', p)
+    
+def bs_bl(fe, biomarker, size, gender):
+    """This function generates and plots a bootstrap distribution.
+    
+    Supply the dataframe, biomarker, and number of samples to take for each distribution.
+    This function returns the 95% confidence interval and plots the distribution.
+    """
+    
+    # divide data and use supplied gender
+    if gender == 'males':
+        df = fe[fe.PTGENDER == 'Male']
+    else:
+        df = fe[fe.PTGENDER == 'Female']
+        
+    # divide the data by final diagnosis
+    ad = df[df.DX == 'AD']
+    non_ad = df[df.DX != 'AD']
+    
+    # create the bootstrap distribution for AD
+    bs_ad = pd.DataFrame({biomarker: [np.mean(np.random.choice(ad[biomarker], 
+                                                                size=len(ad))) for i in range(size)]})
+    
+    
+    # create the bootstrap distribution for non AD
+    bs_non = pd.DataFrame({biomarker: [np.mean(np.random.choice(non_ad[biomarker], 
+                                                                size=len(non_ad))) for i in range(size)]})
+    
+    # calculate and display the 95% confidence intervals
+    ad_lower = bs_ad[biomarker].quantile(0.025)
+    ad_upper = bs_ad[biomarker].quantile(0.975)
+    non_lower = bs_non[biomarker].quantile(0.025)
+    non_upper = bs_non[biomarker].quantile(0.975)
+    print('95% Confidence Interval for AD: ', ad_lower, ' to ', ad_upper)
+    print('95% Confidence Interval for non AD: ', non_lower, ' to ', non_upper)
+    
+    # create and display histogram of the bootstrap distribution
+    _ = bs_ad[biomarker].hist(histtype='stepfilled', color='blue', alpha=0.3, label='AD')
+    _ = bs_non[biomarker].hist(histtype='stepfilled', color='orange', alpha=0.3, label='Non AD')
+    #_ = plt.axvline(lower, color='C1', linewidth=1)
+    #_ = plt.axvline(upper, color='C1', linewidth=1)
+    _ = plt.axvline(bs_non[biomarker].quantile(0.75), color='C1', linewidth=1)
+    _ = plt.axvline(bs_non[biomarker].quantile(0.95), color='red', linewidth=1)
+    _ = plt.title('Bootstrap Means for ' + biomarker)
+    _ = plt.xlabel('Resampled Means for ' + biomarker)
+    _ = plt.ylabel('Frequency')
+    _ = plt.legend(loc='best')
+    
+    # display further results     
+    if abs(non_upper) > abs(non_lower):
+        #return upper
+        #print('25th percentile for AD bootstrap distribution: ', bs_ad[biomarker].quantile(0.25))
+        #print('50th percentile for AD bootstrap distribution (mean): ', bs_ad[biomarker].quantile(0.5))
+        #print('75th percentile for AD bootstrap distribution: ', bs_ad[biomarker].quantile(0.75))
+        #print('95th percentile for AD bootstrap distribution: ', bs_ad[biomarker].quantile(0.95))
+        
+        #print('25th percentile for non AD bootstrap distribution: ', bs_non[biomarker].quantile(0.25))
+        print('Mean for non AD bootstrap distribution: ', bs_non[biomarker].quantile(0.5))
+        print('75th percentile for non AD bootstrap distribution: ', bs_non[biomarker].quantile(0.75))
+        print('95th percentile for non AD bootstrap distribution: ', bs_non[biomarker].quantile(0.95))
+        
+        return bs_non[biomarker].quantile(0.75), bs_non[biomarker].quantile(0.95)
+    
+    else:
+        #return lower
+        #print('25th percentile for AD bootstrap distribution: ', bs_ad[biomarker].quantile(0.75))
+        #print('50th percentile for AD bootstrap distribution (mean): ', bs_ad[biomarker].quantile(0.5))
+        #print('75th percentile for AD bootstrap distribution: ', bs_ad[biomarker].quantile(0.25))
+        #print('95th percentile for AD bootstrap distribution: ', bs_ad[biomarker].quantile(0.05))
+        
+        #print('25th percentile for non AD bootstrap distribution: ', bs_non[biomarker].quantile(0.75))
+        print('Mean for non AD bootstrap distribution: ', bs_non[biomarker].quantile(0.5))
+        print('75th percentile for non AD bootstrap distribution: ', bs_non[biomarker].quantile(0.25))
+        print('95th percentile for non AD bootstrap distribution: ', bs_non[biomarker].quantile(0.05))
+        
+        return bs_non[biomarker].quantile(0.25), bs_non[biomarker].quantile(0.05)
+        
+def eval_bl(fe, biomarker, conf_75, conf_95, gender):
+    """Calculate percentages of patients exceeding a baseline value that ended the study
+    
+    with AD vs. the percentage that didn't end the study with AD.
+    """
+    
+    # divide the data by final diagnosis and gender
+    if gender == 'males':
+        ad = fe[(fe.DX == 'AD') & (fe.PTGENDER == 'Male')]
+        non_ad = fe[(fe.DX != 'AD') & (fe.PTGENDER == 'Male')]
+    else:
+        ad = fe[(fe.DX == 'AD') & (fe.PTGENDER == 'Female')]
+        non_ad = fe[(fe.DX != 'AD') & (fe.PTGENDER == 'Female')]
+            
+    # use correct comparison depending on biomarker increase vs. decrease    
+    if conf_75 > 0:
+        pct_non_75 = len(non_ad[non_ad[biomarker] >= conf_75]) / len(non_ad)
+        pct_non_95 = len(non_ad[non_ad[biomarker] >= conf_95]) / len(non_ad)
+        pct_ad_75 = len(ad[ad[biomarker] <= conf_75]) / len(ad)
+        pct_ad_95 = len(ad[ad[biomarker] <= conf_95]) / len(ad)
+        
+    else:
+        pct_non_75 = len(non_ad[non_ad[biomarker] <= conf_75]) / len(non_ad)
+        pct_non_95 = len(non_ad[non_ad[biomarker] <= conf_95]) / len(non_ad)
+        pct_ad_75 = len(ad[ad[biomarker] >= conf_75]) / len(ad)
+        pct_ad_95 = len(ad[ad[biomarker] >= conf_95]) / len(ad)
+
+    # print results
+    print('Percent of patients without AD diagnosis exceeding lower bootstrap threshold: ', round(pct_non_75*100,2), '%')
+    print('Percent of patients without AD diagnosis exceeding the higher bootstrap threshold: ', 
+          round(pct_non_95*100,2), '%')
+    print('Percent of AD patients below the lower bootstrap threshold: ', round(pct_ad_75*100,2), '%')
+    print('Percent of AD patients below the higher bootstrap threshold: ', round(pct_ad_95*100,2), '%')
+    
+def bs_percentile(fe, biomarker, size, gender):
+    """This function generates and plots a bootstrap distribution.
+    
+    Supply the dataframe, biomarker, and number of samples to take for each distribution.
+    This function returns the 95% confidence interval and plots the distribution.
+    """
+    
+    # divide data and use supplied gender
+    if gender == 'males':
+        df = fe[fe.PTGENDER == 'Male']
+    else:
+        df = fe[fe.PTGENDER == 'Female']
+        
+    # divide the data by final diagnosis
+    ad = df[df.DX == 'AD']
+    non_ad = df[df.DX != 'AD']
+    
+    if np.mean(ad[biomarker]) > np.mean(non_ad[biomarker]):            #min(ad[biomarker]) >= 0:
+        # create the bootstrap distribution for AD
+        bs_ad_25 = pd.DataFrame({biomarker: [np.percentile(np.random.choice(ad[biomarker], 
+                                                                    size=len(ad)),25) for i in range(size)]})
+    
+        bs_ad_5 = pd.DataFrame({biomarker: [np.percentile(np.random.choice(ad[biomarker], 
+                                                                    size=len(ad)),5) for i in range(size)]})
+        
+        bs_non_75 = pd.DataFrame({biomarker: [np.percentile(np.random.choice(non_ad[biomarker], 
+                                                                    size=len(non_ad)),75) for i in range(size)]})
+    
+        bs_non_95 = pd.DataFrame({biomarker: [np.percentile(np.random.choice(non_ad[biomarker], 
+                                                                    size=len(non_ad)),95) for i in range(size)]})
+        
+    else:
+        # create the bootstrap distribution for AD
+        bs_ad_25 = pd.DataFrame({biomarker: [np.percentile(np.random.choice(ad[biomarker], 
+                                                                    size=len(ad)),75) for i in range(size)]})
+    
+        bs_ad_5 = pd.DataFrame({biomarker: [np.percentile(np.random.choice(ad[biomarker], 
+                                                                    size=len(ad)),95) for i in range(size)]})
+        
+        bs_non_75 = pd.DataFrame({biomarker: [np.percentile(np.random.choice(non_ad[biomarker], 
+                                                                    size=len(non_ad)),25) for i in range(size)]})
+    
+        bs_non_95 = pd.DataFrame({biomarker: [np.percentile(np.random.choice(non_ad[biomarker], 
+                                                                    size=len(non_ad)),5) for i in range(size)]})
+    
+    
+    # calculate and display the 95% confidence intervals
+    #ad_lower = bs_ad[biomarker].quantile(0.025)
+    #ad_upper = bs_ad[biomarker].quantile(0.975)
+    #non_lower = bs_non[biomarker].quantile(0.025)
+    #non_upper = bs_non[biomarker].quantile(0.975)
+    #print('95% Confidence Interval for AD: ', ad_lower, ' to ', ad_upper)
+    #print('95% Confidence Interval for non AD: ', non_lower, ' to ', non_upper)
+    
+    # create and display histogram of the bootstrap distribution
+    _ = bs_ad_25[biomarker].hist(histtype='stepfilled', color='orange', alpha=0.3, label='AD_25')
+    _ = bs_ad_5[biomarker].hist(histtype='stepfilled', color='red', alpha=0.3, label='AD_5')
+    _ = bs_non_75[biomarker].hist(histtype='stepfilled', color='green', alpha=0.3, label='Non_75')
+    _ = bs_non_95[biomarker].hist(histtype='stepfilled', color='blue', alpha=0.3, label='Non_95')
+    
+    #_ = plt.axvline(lower, color='C1', linewidth=1)
+    #_ = plt.axvline(upper, color='C1', linewidth=1)
+    _ = plt.axvline(np.mean(bs_non_75[biomarker]), color='C1', linewidth=1, label='Non AD 75th Pctle')
+    _ = plt.axvline(np.mean(bs_ad_25[biomarker]), color='red', linewidth=1, label='AD 25th Pctle')
+    _ = plt.title('Bootstrap Threshold Values ' + biomarker)
+    _ = plt.xlabel('Resampled 75th and 95th Conf Intvl\'s for ' + biomarker)
+    _ = plt.ylabel('Frequency')
+    _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    
+    # display further results     
+    print('Mean 75th percentile of bootstrap samples for non AD patients: ', np.mean(bs_non_75[biomarker]))
+    #print('Mean 95th percentile of bootstrap samples for non AD patients: ', np.mean(bs_non_95[biomarker]))
+    print('Mean 25th percentile of bootstrap samples for AD patients: ', np.mean(bs_ad_25[biomarker]))
+    #print('Mean 5th percentile of bootstrap samples for non AD patients: ', np.mean(bs_ad_5[biomarker]))
+    
+    #return bs_non_75, bs_ad_25
