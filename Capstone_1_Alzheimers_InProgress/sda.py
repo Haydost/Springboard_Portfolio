@@ -269,3 +269,57 @@ def eval_bs(fe, biomarker, conf, gender='both'):
     print('Percent progressing CN to MCI exceeding threshold: ', round(prog_CN_MCI*100,2), '%')
     print('Percent Progressing MCI to AD exceeding threshold: ', round(prog_MCI_AD*100,2), '%')
     print('Percent Progressing CN to AD exceeding threshold: ', round(prog_CN_AD*100,2), '%')
+    
+def bl_perm_test(fe, biomarker, gender, size):
+    """This function returns the p value for the test that patients that ended AD have the 
+    
+    same distribution as those that didn't in the supplied biomarker's baseline values. 
+    The test will be performed over 'size' permutations. A significant p value means that patients
+    that developed AD have a different distribution for their baseline values than those that didn't.
+    """
+    
+    # divide data and use supplied gender
+    if gender == 'males':
+        df = fe[fe.PTGENDER == 'Male']
+    else:
+        df = fe[fe.PTGENDER == 'Female']
+    
+    # create a combined array for the biomarker
+    c_arr = np.array(df[biomarker])
+    
+    # divide the data by final diagnosis
+    ad = df[df.DX == 'AD']
+    non_ad = df[df.DX != 'AD']
+
+    # get counts of the number of patients that developed AD
+    num_ad = df.DX.value_counts()['AD']
+    
+    # calculate the observed mean difference
+    obs_mean_diff = np.mean(ad[biomarker]) - np.mean(non_ad[biomarker])
+    
+    # initialize empty numpy array
+    perm_mean_diffs = np.empty(size)
+    
+    # run the permutations calculating means each time
+    for i in range(size):
+        r_arr = np.random.permutation(c_arr)
+        null_arr1 = r_arr[:num_ad]
+        null_arr2 = r_arr[num_ad:]
+        perm_mean_diffs[i] = np.mean(null_arr1) - np.mean(null_arr2)
+    
+    # uncomment to quickly view the distribution
+    _ = plt.hist(perm_mean_diffs, density=True, color='blue', label='Perms')
+    _ = plt.axvline(obs_mean_diff, color='C1')
+    _ = plt.title('Probability Distribution for Mean Differences\nBetween AD/Non AD for ' + biomarker)
+    _ = plt.xlabel('Mean Difference Between AD/Non AD')
+    _ = plt.ylabel('Probability Density')
+    
+    # calculate and display p value
+    if obs_mean_diff > np.mean(perm_mean_diffs):
+        p = np.sum(perm_mean_diffs >= obs_mean_diff) / len(perm_mean_diffs)
+    else:
+        p = np.sum(perm_mean_diffs <= obs_mean_diff) / len(perm_mean_diffs)
+    print('Distribution Test for AD/Non AD')
+    print('Variable: ', biomarker)
+    print('If p < 0.05, then patients that ended AD had a different distribution for ', biomarker)
+    print('p-value: ', p)
