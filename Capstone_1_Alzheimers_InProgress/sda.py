@@ -505,7 +505,10 @@ def bs_percentile(fe, biomarker, size, gender):
     #_ = plt.axvline(upper, color='C1', linewidth=1)
     _ = plt.axvline(np.mean(bs_non_75[biomarker]), color='C1', linewidth=1, label='Non AD 75th Pctle')
     _ = plt.axvline(np.mean(bs_ad_25[biomarker]), color='red', linewidth=1, label='AD 25th Pctle')
-    _ = plt.title('Bootstrap Threshold Values ' + biomarker)
+    if gender == 'males':
+        _ = plt.title('Bootstrap Threshold Values for Males ' + biomarker)
+    else:
+        _ = plt.title('Bootstrap Threshold Values for Females ' + biomarker)
     _ = plt.xlabel('Resampled 75th and 95th Conf Intvl\'s for ' + biomarker)
     _ = plt.ylabel('Frequency')
     _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
@@ -516,4 +519,39 @@ def bs_percentile(fe, biomarker, size, gender):
     print('Mean 25th percentile of bootstrap samples for AD patients: ', np.mean(bs_ad_25[biomarker]))
     #print('Mean 5th percentile of bootstrap samples for non AD patients: ', np.mean(bs_ad_5[biomarker]))
     
-    #return bs_non_75, bs_ad_25
+    return bs_non_75, bs_ad_25
+    
+def get_pctles(bs_non_75, bs_ad_25, fe, biomarker, gender, increase=True):
+    """This function will take the percentile from one distribution and calculate
+    
+    The corresponding percentage associated with the other distribution. You must
+    supply the biomarker and the two bootstrap distributions returned from the 
+    bs_percentiles() function. The default assumes 'increase=True', meaning the 
+    biomarker will increase as someone progresses to Alzheimer's. Set to false
+    for biomarkers that decrease with progression to AD (like Hippocampus/MidTemp).
+    """
+    
+    if gender == 'males':
+        ad = fe[(fe.DX == 'AD') & (fe.PTGENDER == 'Male')]
+        non = fe[(fe.DX != 'AD') & (fe.PTGENDER == 'Male')]
+    else:
+        ad = fe[(fe.DX == 'AD') & (fe.PTGENDER == 'Female')]
+        non = fe[(fe.DX != 'AD') & (fe.PTGENDER == 'Female')]
+        
+    bs_ad = pd.DataFrame({'percentiles': 
+                         [scipy.stats.percentileofscore(ad.sample(len(ad),replace=True)[biomarker],
+                                                        np.mean(bs_non_75).values) for i in range(10000)]})
+    
+    bs_non = pd.DataFrame({'percentiles': 
+                         [scipy.stats.percentileofscore(non.sample(len(non),replace=True)[biomarker],
+                                                        np.mean(bs_ad_25).values) for i in range(10000)]})
+    
+    ad = round(np.mean(bs_ad.percentiles),2)
+    non = round(np.mean(bs_non.percentiles),2)
+    
+    if increase:
+        print('The 75th percentile for non AD is the', ad, 'th percentile for AD.')
+        print('The 25th percentile for AD is the', non, 'th percentile for Non AD.')
+    else:    
+        print('The 75th percentile for non AD is the', 100-ad, 'th percentile for AD.')
+        print('The 25th percentile for AD is the', 100-non, 'th percentile for Non AD.')
