@@ -90,11 +90,13 @@ def test_gender_effect(df, biomarker, size):
         perm_mean_diffs[i] = np.mean(null_arr1) - np.mean(null_arr2)
     
     # uncomment to quickly view the distribution
-    _ = plt.hist(perm_mean_diffs, density=True, color='blue', label='Perms')
-    _ = plt.axvline(obs_mean_diff, color='C1')
+    _ = plt.hist(perm_mean_diffs, density=True, color='blue', 
+                 label='Permutation Mean Diffs\nUnder the Null Hypothesis')
+    _ = plt.axvline(obs_mean_diff, color='C1', label='Observed Mean Difference')
     _ = plt.title('Probability Distribution for Mean Differences\nBetween Genders for ' + biomarker)
     _ = plt.xlabel('Mean Difference Between Males/Females')
     _ = plt.ylabel('Probability Density')
+    _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     
     # calculate and display p value
     if obs_mean_diff > np.mean(perm_mean_diffs):
@@ -311,11 +313,13 @@ def bl_perm_test(fe, biomarker, gender, size):
         perm_mean_diffs[i] = np.mean(null_arr1) - np.mean(null_arr2)
     
     # uncomment to quickly view the distribution
-    _ = plt.hist(perm_mean_diffs, density=True, color='blue', label='Perms')
-    _ = plt.axvline(obs_mean_diff, color='C1')
+    _ = plt.hist(perm_mean_diffs, density=True, color='blue', 
+                 label='Permutation Mean Diffs\nUnder the Null Hypothesis')
+    _ = plt.axvline(obs_mean_diff, color='C1', label='Observed Difference')
     _ = plt.title('Probability Distribution for Mean Differences\nBetween AD/Non AD for ' + biomarker)
     _ = plt.xlabel('Mean Difference Between AD/Non AD')
     _ = plt.ylabel('Probability Density')
+    _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     
     # calculate and display p value
     if obs_mean_diff > np.mean(perm_mean_diffs):
@@ -430,7 +434,8 @@ def eval_bl(fe, biomarker, conf_75, conf_95, gender):
         pct_ad_95 = len(ad[ad[biomarker] >= conf_95]) / len(ad)
 
     # print results
-    print('Percent of patients without AD diagnosis exceeding lower bootstrap threshold: ', round(pct_non_75*100,2), '%')
+    print('Percent of patients without AD diagnosis exceeding lower bootstrap threshold: ',
+          round(pct_non_75*100,2), '%')
     print('Percent of patients without AD diagnosis exceeding the higher bootstrap threshold: ', 
           round(pct_non_95*100,2), '%')
     print('Percent of AD patients below the lower bootstrap threshold: ', round(pct_ad_75*100,2), '%')
