@@ -514,9 +514,9 @@ def bs_percentile(fe, biomarker, size, gender):
     _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     
     # display further results     
-    print('Mean 75th percentile of bootstrap samples for non AD patients: ', np.mean(bs_non_75[biomarker]))
+    print('25% false positive threshold value: ', np.mean(bs_non_75[biomarker]))
     #print('Mean 95th percentile of bootstrap samples for non AD patients: ', np.mean(bs_non_95[biomarker]))
-    print('Mean 25th percentile of bootstrap samples for AD patients: ', np.mean(bs_ad_25[biomarker]))
+    print('75% detection threshold value: ', np.mean(bs_ad_25[biomarker]))
     #print('Mean 5th percentile of bootstrap samples for non AD patients: ', np.mean(bs_ad_5[biomarker]))
     
     return bs_non_75, bs_ad_25
@@ -550,8 +550,8 @@ def get_pctles(bs_non_75, bs_ad_25, fe, biomarker, gender, increase=True):
     non = round(np.mean(bs_non.percentiles),2)
     
     if increase:
-        print('The 75th percentile for non AD is the', ad, 'th percentile for AD.')
-        print('The 25th percentile for AD is the', non, 'th percentile for Non AD.')
+        print('The detection rate for AD with 25% false positive is', round(100-ad,2), '%')
+        print('The false positive rate for 75% AD detection is', round(100-non,2), '%')
     else:    
-        print('The 75th percentile for non AD is the', 100-ad, 'th percentile for AD.')
-        print('The 25th percentile for AD is the', 100-non, 'th percentile for Non AD.')
+        print('The detection rate for AD with 25% false positive is', ad, '%')
+        print('The false positive rate for 75% AD detection is', non, '%')
