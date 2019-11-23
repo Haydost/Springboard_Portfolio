@@ -572,6 +572,7 @@ def summarize_bl_thresholds(final_exam, column, gender, threshold):
     str1 = ' patients had baseline ' + column + ' values exceeding the threshold of '
     str2 = '% of patients that didn\'t have AD yet but had '
         
-    print(str(got_ad) + ' of ' + str(not_ad) + str1 + str(threshold) + ' and ended with AD.')
-    print(str(per_ad) + str2 + column + ' exceeding threshold value of ' + str(threshold) + ' ended with AD.')
+    print(str(got_ad) + ' of ' + str(not_ad) + str1 + str(threshold) + ' \nand ended with AD.')
+    print()
+    print(str(per_ad) + str2 + column + ' \nexceeding threshold value of ' + str(threshold) + ' ended with AD.')
         

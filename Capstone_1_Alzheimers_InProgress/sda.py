@@ -112,7 +112,7 @@ def bs(df, biomarker, size):
     """This function generates and plots a bootstrap distribution.
     
     Supply the dataframe, biomarker, and number of samples to take for each distribution.
-    This function returns the 95% confidence interval and plots the distribution.
+    This function returns the 95% confidence interval for the mean and plots the distribution.
     """
     
     # create the bootstrap distribution
@@ -268,6 +268,7 @@ def eval_bs(fe, biomarker, conf, gender='both'):
         prog_CN_AD = len(df4[df4[biomarker] < conf]) / len(df4)
 
     # print results
+    print('Threshold: ', conf)
     print('Percent exceeding threshold that ended CN: ', round(end_CN*100,2), '%')
     print('Percent exceeding threshold that ended MCI: ', round(end_MCI*100,2), '%')
     print('Percent exceeding threshold that ended AD: ', round(end_AD*100,2), '%')
