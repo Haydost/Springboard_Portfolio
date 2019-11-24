@@ -218,13 +218,17 @@ def old_eval_bs(fe, biomarker, conf, gender='both'):
     print('Percent Progressing MCI to AD exceeding threshold: ', round(prog_MCI_AD*100,2), '%')
     print('Percent Progressing CN to AD exceeding threshold: ', round(prog_CN_AD*100,2), '%')
     
-def eval_bs(fe, biomarker, conf, gender='both'):
+def eval_bs(fe, biomarker, conf, res, cols, gender='both'):
     """Calculate percentages of patients with a change in diagnosis that had
     
     a change in the biomarker larger than the threshold value identified from
     bootstrap analysis. You must supply the full final_exam dataframe, the biomarker 
     of interest, the confidence level to evaluate, and provide optional gender of male/female.
+    Also provide a results dataframe 'res' to store the results and its columns list 'cols'.
     """
+    
+    # isolate the patients who did not experience a change in diagnosis
+    nc = fe[fe['DX'] == fe['DX_bl2']]
     
     # isolate patients who progressed from 'CN' to 'AD'
     cn_mci = fe[(fe['DX'] == 'MCI') & (fe['DX_bl2'] == 'CN')]
@@ -237,16 +241,19 @@ def eval_bs(fe, biomarker, conf, gender='both'):
     
     if gender == 'both':
         df = fe
+        df1 = nc
         df2 = cn_mci
         df3 = mci_ad
         df4 = cn_ad
     elif gender == 'males':
         df = fe[fe['PTGENDER'] == 'Male']
+        df1 = nc[nc.PTGENDER == 'Male']
         df2 = cn_mci[cn_mci.PTGENDER == 'Male']
         df3 = mci_ad[mci_ad.PTGENDER == 'Male']
         df4 = cn_ad[cn_ad.PTGENDER == 'Male']
     else:
         df = fe[fe['PTGENDER'] == 'Female']
+        df1 = nc[nc.PTGENDER == 'Female']
         df2 = cn_mci[cn_mci.PTGENDER == 'Female']
         df3 = mci_ad[mci_ad.PTGENDER == 'Female']
         df4 = cn_ad[cn_ad.PTGENDER == 'Female']
@@ -256,26 +263,138 @@ def eval_bs(fe, biomarker, conf, gender='both'):
         end_CN = len(df[(df['DX'] == 'CN') & (df[biomarker] > conf)]) / len(df[df[biomarker] > conf])
         end_MCI = len(df[(df['DX'] == 'MCI') & (df[biomarker] > conf)]) / len(df[df[biomarker] > conf])
         end_AD = len(df[(df['DX'] == 'AD') & (df[biomarker] > conf)]) / len(df[df[biomarker] > conf])     
-        prog_CN_MCI = len(df2[df2[biomarker] > conf]) / len(df2)
-        prog_MCI_AD = len(df3[df3[biomarker] > conf]) / len(df3)
-        prog_CN_AD = len(df4[df4[biomarker] > conf]) / len(df4)
+        no_prog = round((len(df1[df1[biomarker] > conf]) / len(df1))*100,2)
+        prog_CN_MCI = round((len(df2[df2[biomarker] > conf]) / len(df2))*100,2)
+        prog_MCI_AD = round((len(df3[df3[biomarker] > conf]) / len(df3))*100,2)
+        prog_CN_AD = round((len(df4[df4[biomarker] > conf]) / len(df4))*100,2)
     else:
         end_CN = len(df[(df['DX'] == 'CN') & (df[biomarker] < conf)]) / len(df[df[biomarker] < conf])
         end_MCI = len(df[(df['DX'] == 'MCI') & (df[biomarker] < conf)]) / len(df[df[biomarker] < conf])
         end_AD = len(df[(df['DX'] == 'AD') & (df[biomarker] < conf)]) / len(df[df[biomarker] < conf])     
-        prog_CN_MCI = len(df2[df2[biomarker] < conf]) / len(df2)
-        prog_MCI_AD = len(df3[df3[biomarker] < conf]) / len(df3)
-        prog_CN_AD = len(df4[df4[biomarker] < conf]) / len(df4)
+        no_prog = round((len(df1[df1[biomarker] < conf]) / len(df1))*100,2)
+        prog_CN_MCI = round((len(df2[df2[biomarker] < conf]) / len(df2))*100,2)
+        prog_MCI_AD = round((len(df3[df3[biomarker] < conf]) / len(df3))*100,2)
+        prog_CN_AD = round((len(df4[df4[biomarker] < conf]) / len(df4))*100,2)
 
     # print results
     print('Threshold: ', conf)
     print('Percent exceeding threshold that ended CN: ', round(end_CN*100,2), '%')
     print('Percent exceeding threshold that ended MCI: ', round(end_MCI*100,2), '%')
     print('Percent exceeding threshold that ended AD: ', round(end_AD*100,2), '%')
-    print('Percent progressing CN to MCI exceeding threshold: ', round(prog_CN_MCI*100,2), '%')
-    print('Percent Progressing MCI to AD exceeding threshold: ', round(prog_MCI_AD*100,2), '%')
-    print('Percent Progressing CN to AD exceeding threshold: ', round(prog_CN_AD*100,2), '%')
+    print('Percent with no diagnosis change exceeding threshold: ', no_prog, '%')
+    print('Percent progressing CN to MCI exceeding threshold: ', prog_CN_MCI, '%')
+    print('Percent Progressing MCI to AD exceeding threshold: ', prog_MCI_AD, '%')
+    print('Percent Progressing CN to AD exceeding threshold: ', prog_CN_AD, '%')
     
+    if gender == 'males':
+        biomarker = str(biomarker) + '_m'
+    elif gender == 'females':
+        biomarker = str(biomarker) + '_f'
+        
+    temp = pd.DataFrame([[biomarker, conf, round(end_CN*100,2), 'Ended CN']], columns=cols)
+    temp = temp.append(pd.DataFrame([[biomarker, conf, no_prog, 'No DX Change']], columns=cols))
+    temp = temp.append(pd.DataFrame([[biomarker, conf, prog_CN_MCI, 'CN to MCI']], columns=cols))
+    temp = temp.append(pd.DataFrame([[biomarker, conf, prog_MCI_AD, 'MCI to AD']], columns=cols))
+    temp = temp.append(pd.DataFrame([[biomarker, conf, prog_CN_AD, 'CN to AD']], columns=cols))
+    res = res.append(temp, ignore_index=True)
+    return res
+
+def summarize_clin_changes(changes):
+    """Create plots to summarize the changes in biomarkers."""
+    
+    # separate the data for creating different plots
+    clins = ['CDRSB_delta', 'ADAS11_delta_m', 'ADAS11_delta_f', 'ADAS13_delta_m', 
+            'ADAS13_delta_f', 'MMSE_delta', 'RAVLT_delta']
+    filt = changes.biomarker.isin(clins)
+    c_clin = changes[filt]
+    
+    #exclude false positives
+    fp = ['CN to MCI', 'MCI to AD', 'CN to AD']
+    filt2 = c_clin.group.isin(fp)
+    changes_clin = c_clin[filt2]
+    
+    # set the subplot
+    #plt.rcParams["figure.figsize"] = (14,4)
+    #plt.subplot(1, 2, 1)
+    
+    g = sns.catplot(x='biomarker', y='pct', hue='group', data=changes_clin, height=4.5, aspect=1.5,
+                    kind='bar', palette='muted', legend=False)
+    _ = g.despine(left=True)
+    _ = g.set_xticklabels(rotation=60)
+    _ = g.set_ylabels('Percent of Patients')
+    _ = g.set_xlabels('Biomarker')
+    _ = plt.title('Change Detection Rates for Clinical Biomarkers')
+    _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    
+def summarize_scan_changes(changes):    
+    scans = ['Hippocampus_delta', 'Ventricles_delta_m', 'Ventricles_delta_f', 'WholeBrain_delta', 
+            'Entorhinal_delta', 'MidTemp_delta_m', 'MidTemp_delta_f', ]
+    filt = changes.biomarker.isin(scans)
+    c_scan = changes[filt]
+    
+    #exclude false positives
+    fp = ['CN to MCI', 'MCI to AD', 'CN to AD']
+    filt2 = c_scan.group.isin(fp)
+    changes_scan = c_scan[filt2]
+    
+    #plt.subplot(1, 2, 2)
+    g = sns.catplot(x='biomarker', y='pct', hue='group', data=changes_scan, kind='bar', 
+                    height=4.5, aspect=1.5, palette='muted', legend=False)
+    _ = g.despine(left=True)
+    _ = g.set_xticklabels(rotation=60)
+    _ = g.set_ylabels('Percent of Patients')
+    _ = g.set_xlabels('Biomarker')
+    _ = plt.title('Change Detection Rates for Brain Scan Biomarkers')
+    _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    
+def summarize_clin_fps(changes):
+    """Create plots to summarize the changes in biomarkers."""
+    
+    # separate the data for creating different plots
+    clins = ['CDRSB_delta', 'ADAS11_delta_m', 'ADAS11_delta_f', 'ADAS13_delta_m', 
+            'ADAS13_delta_f', 'MMSE_delta', 'RAVLT_delta']
+    filt = changes.biomarker.isin(clins)
+    c_clin = changes[filt]
+    
+    #include only false positives
+    fp = ['Ended CN', 'No DX Change']
+    filt2 = c_clin.group.isin(fp)
+    changes_clin = c_clin[filt2]
+    
+    # set the subplot
+    #plt.rcParams["figure.figsize"] = (14,4)
+    #plt.subplot(1, 2, 1)
+    
+    g = sns.catplot(x='biomarker', y='pct', hue='group', data=changes_clin, height=4.5, aspect=1.5,
+                    kind='bar', legend=False)
+    _ = g.despine(left=True)
+    _ = g.set_xticklabels(rotation=60)
+    _ = g.set_ylabels('Percent of Patients')
+    _ = g.set_xlabels('Biomarker')
+    _ = plt.title('False Positive Rates for Clinical Biomarker Thresholds')
+    _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    
+def summarize_scan_fps(changes):    
+    scans = ['Hippocampus_delta', 'Ventricles_delta_m', 'Ventricles_delta_f', 'WholeBrain_delta', 
+            'Entorhinal_delta', 'MidTemp_delta_m', 'MidTemp_delta_f', ]
+    filt = changes.biomarker.isin(scans)
+    c_scan = changes[filt]
+        
+    #exclude false positives
+    fp = ['Ended CN', 'No DX Change']
+    filt2 = c_scan.group.isin(fp)
+    changes_scan = c_scan[filt2]
+    
+    #plt.subplot(1, 2, 2)
+    g = sns.catplot(x='biomarker', y='pct', hue='group', data=changes_scan, kind='bar', 
+                    height=4.5, aspect=1.5, legend=False)
+    _ = g.despine(left=True)
+    _ = g.set_xticklabels(rotation=60)
+    _ = g.set_ylabels('Percent of Patients')
+    _ = g.set_xlabels('Biomarker')
+    _ = plt.title('False Positive Rates for Brain Scan Biomarkers')
+    _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        
 def bl_perm_test(fe, biomarker, gender, size):
     """This function returns the p value for the test that patients that ended AD have the 
     
