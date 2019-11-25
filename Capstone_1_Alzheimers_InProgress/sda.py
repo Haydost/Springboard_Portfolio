@@ -666,16 +666,18 @@ def get_pctles(bs_non_75, bs_ad_25, fe, biomarker, gender, increase=True):
                          [scipy.stats.percentileofscore(non.sample(len(non),replace=True)[biomarker],
                                                         np.mean(bs_ad_25).values) for i in range(10000)]})
     
-    ad = round(np.mean(bs_ad.percentiles),2)
-    non = round(np.mean(bs_non.percentiles),2)
+    ad_score = round(np.mean(bs_ad.percentiles),2)
+    non_score = round(np.mean(bs_non.percentiles),2)
     
     if increase:
-        print('The detection rate for AD with 25% false positive is', round(100-ad,2), '%')
-        print('The false positive rate for 75% AD detection is', round(100-non,2), '%')
+        print('The detection rate for AD with 25% false positive is', round(100-ad_score,2), '%')
+        print('The false positive rate for 75% AD detection is', round(100-non_score,2), '%')
+        return round(100-ad_score,2), round(100-non_score,2)
     else:    
-        print('The detection rate for AD with 25% false positive is', ad, '%')
-        print('The false positive rate for 75% AD detection is', non, '%')
-        
+        print('The detection rate for AD with 25% false positive is', ad_score, '%')
+        print('The false positive rate for 75% AD detection is', non_score, '%')
+        return ad_score, non_score
+          
 def rebuild_changes_df():
     """This function is designed to rebuild the changes dataframe.
     
@@ -758,3 +760,110 @@ def rebuild_changes_df():
     changes = pd.DataFrame({'biomarker': biomarker, 'thresh': thresh, 'pct': pct, 'group': group})
     
     return changes
+
+def rebuild_bl():
+    """This function is designed to rebuild the summary of baseline biomarkers.
+    
+    This was dataframe was generated from running all of the bs_percentiles and 
+    get_pctiles functions. The data are reloaded here so the dataframe can be 
+    recreated without having to run every single function.
+    """
+    
+    # populate the biomarker list
+    biomarker = ['CDRSB_bl_m', 'CDRSB_bl_f', 'ADAS11_bl_m', 'ADAS11_bl_f',
+       'ADAS13_bl_m', 'ADAS13_bl_f', 'MMSE_bl_m', 'MMSE_bl_f',
+       'RAVLT_immediate_bl_m', 'RAVLT_immediate_bl_f', 'Hippocampus_bl_m',
+       'Hippocampus_bl_f', 'Ventricles_bl_m', 'Ventricles_bl_f',
+       'WholeBrain_bl_m', 'WholeBrain_bl_f', 'Entorhinal_bl_m',
+       'Entorhinal_bl_f', 'MidTemp_bl_m', 'MidTemp_bl_f', 'CDRSB_bl_m',
+       'CDRSB_bl_f', 'ADAS11_bl_m', 'ADAS11_bl_f', 'ADAS13_bl_m',
+       'ADAS13_bl_f', 'MMSE_bl_m', 'MMSE_bl_f', 'RAVLT_immediate_bl_m',
+       'RAVLT_immediate_bl_f', 'Hippocampus_bl_m', 'Hippocampus_bl_f',
+       'Ventricles_bl_m', 'Ventricles_bl_f', 'WholeBrain_bl_m',
+       'WholeBrain_bl_f', 'Entorhinal_bl_m', 'Entorhinal_bl_f',
+       'MidTemp_bl_m', 'MidTemp_bl_f']
+    
+    # populate the kind of rate
+    rate_kind = ['Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'Detection Rate @25% FP', 'Detection Rate @25% FP',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR',
+            'False Positive Rate @75% DR', 'False Positive Rate @75% DR']
+    
+    # populate the thresholds
+    th = [1.47796250e+00, 1.03582500e+00, 1.04565672e+01, 8.77764000e+00,
+       1.67372023e+01, 1.37884600e+01, 2.73662500e+01, 2.79999500e+01,
+       2.93589500e+01, 3.72926000e+01, 6.67301140e+03, 6.39104055e+03,
+       5.07976370e+04, 3.79437399e+04, 1.02558200e+06, 9.28774859e+05,
+       3.47441757e+03, 3.15239910e+03, 1.91798401e+04, 1.76171079e+04,
+       1.54165000e+00, 1.90445000e+00, 1.13094967e+01, 1.15772740e+01,
+       1.91089450e+01, 2.00123600e+01, 2.70373750e+01, 2.61414000e+01,
+       2.88948000e+01, 3.22810000e+01, 6.97061595e+03, 6.24035630e+03,
+       3.34590551e+04, 2.43875284e+04, 1.12003375e+06, 9.79476420e+05,
+       3.65669015e+03, 3.14421010e+03, 2.06908618e+04, 1.80247469e+04]   
+    
+    # populate the rates
+    rate = [83.21, 85.93, 81.62, 90.47, 85.69, 92.96, 79.62, 84.68, 77.54,
+       91.1 , 65.8 , 80.27, 45.39, 40.16, 47.51, 56.02, 67.3 , 75.82,
+       56.7 , 70.04, 15.44, 11.32, 20.17,  9.97, 14.58,  7.82, 25.77,
+        9.98, 22.4 , 13.74, 35.22, 21.3 , 56.07, 52.58, 66.59, 45.83,
+       34.28, 24.84, 44.84, 30.45]
+    
+    # build the dataframe
+    bl = pd.DataFrame({'biomarker': biomarker, 'threshold': th, 'rate_kind': rate_kind, 'rate': rate})
+    
+    # return the dataframe
+    return bl
+
+def summarize_clin_bl(bl):
+    """This function creates the summary plot for the clinical baseline thresholds."""
+    
+    # select the cinical exams
+    clin = ['CDRSB_bl_m', 'CDRSB_bl_f', 'ADAS11_bl_m', 'ADAS11_bl_f', 'ADAS13_bl_m', 'ADAS13_bl_f' 
+            'MMSE_bl_m', 'MMSE_bl_f', 'RAVLT_immediate_bl_m', 'RAVLT_immediate_bl_f']
+    filt = bl.biomarker.isin(clin)
+    bl_clin = bl[filt]
+    
+    # build the plot
+    g = sns.catplot(x='biomarker', y='rate', hue='rate_kind', data=bl_clin, height=4.5, aspect=1.5,
+                    kind='bar', legend=False)
+    _ = g.despine(left=True)
+    _ = g.set_xticklabels(rotation=60)
+    _ = g.set_ylabels('Percent of Patients')
+    _ = g.set_xlabels('Biomarker')
+    _ = plt.title('Detection and False Positive Rates for Baseline Biomarkers')
+    _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    
+def summarize_scans_bl(bl):
+    """This function creates the summary plot for the brain scan baseline thresholds."""
+    
+    # select the brain scans
+    scans = ['Hippocampus_bl_m', 'Hippocampus_bl_f', 'Ventricles_bl_m', 'Ventricles_bl_f', 'WholeBrain_bl_m',
+             'WholeBrain_bl_f', 'Entorhinal_bl_m', 'Entorhinal_bl_f', 'MidTemp_bl_m', 'MidTemp_bl_f']
+    filt = bl.biomarker.isin(scans)
+    bl_scans = bl[filt]
+    
+    # build the plot
+    g = sns.catplot(x='biomarker', y='rate', hue='rate_kind', data=bl_scans, height=4.5, aspect=1.5,
+                    kind='bar', legend=False)
+    _ = g.despine(left=True)
+    _ = g.set_xticklabels(rotation=60)
+    _ = g.set_ylabels('Percent of Patients')
+    _ = g.set_xlabels('Biomarker')
+    _ = plt.title('Detection and False Positive Rates for Baseline Biomarkers')
+    _ = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
