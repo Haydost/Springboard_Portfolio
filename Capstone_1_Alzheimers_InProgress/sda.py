@@ -675,3 +675,86 @@ def get_pctles(bs_non_75, bs_ad_25, fe, biomarker, gender, increase=True):
     else:    
         print('The detection rate for AD with 25% false positive is', ad, '%')
         print('The false positive rate for 75% AD detection is', non, '%')
+        
+def rebuild_changes_df():
+    """This function is designed to rebuild the changes dataframe.
+    
+    The changes dataframe was generated one piece at a time while running other functions.
+    This function recreates that dataframe using values from one version of that dataframe.
+    """
+    
+    # repopulate list of biomarkers
+    biomarker = ['CDRSB_delta', 'CDRSB_delta', 'CDRSB_delta', 'CDRSB_delta',
+       'CDRSB_delta', 'ADAS11_delta_m', 'ADAS11_delta_m',
+       'ADAS11_delta_m', 'ADAS11_delta_m', 'ADAS11_delta_m',
+       'ADAS11_delta_f', 'ADAS11_delta_f', 'ADAS11_delta_f',
+       'ADAS11_delta_f', 'ADAS11_delta_f', 'ADAS13_delta_m',
+       'ADAS13_delta_m', 'ADAS13_delta_m', 'ADAS13_delta_m',
+       'ADAS13_delta_m', 'ADAS13_delta_f', 'ADAS13_delta_f',
+       'ADAS13_delta_f', 'ADAS13_delta_f', 'ADAS13_delta_f', 'MMSE_delta',
+       'MMSE_delta', 'MMSE_delta', 'MMSE_delta', 'MMSE_delta',
+       'RAVLT_delta', 'RAVLT_delta', 'RAVLT_delta', 'RAVLT_delta',
+       'RAVLT_delta', 'Hippocampus_delta', 'Hippocampus_delta',
+       'Hippocampus_delta', 'Hippocampus_delta', 'Hippocampus_delta',
+       'Ventricles_delta_m', 'Ventricles_delta_m', 'Ventricles_delta_m',
+       'Ventricles_delta_m', 'Ventricles_delta_m', 'Ventricles_delta_f',
+       'Ventricles_delta_f', 'Ventricles_delta_f', 'Ventricles_delta_f',
+       'Ventricles_delta_f', 'WholeBrain_delta', 'WholeBrain_delta',
+       'WholeBrain_delta', 'WholeBrain_delta', 'WholeBrain_delta',
+       'Entorhinal_delta', 'Entorhinal_delta', 'Entorhinal_delta',
+       'Entorhinal_delta', 'Entorhinal_delta', 'MidTemp_delta_m',
+       'MidTemp_delta_m', 'MidTemp_delta_m', 'MidTemp_delta_m',
+       'MidTemp_delta_m', 'MidTemp_delta_f', 'MidTemp_delta_f',
+       'MidTemp_delta_f', 'MidTemp_delta_f', 'MidTemp_delta_f']
+    
+    # repopulate data for the thresholds
+    thresh = [ 6.03711790e-01,  6.03711790e-01,  6.03711790e-01,  6.03711790e-01,
+        6.03711790e-01,  1.68623544e+00,  1.68623544e+00,  1.68623544e+00,
+        1.68623544e+00,  1.68623544e+00,  2.07187739e+00,  2.07187739e+00,
+        2.07187739e+00,  2.07187739e+00,  2.07187739e+00,  2.13385442e+00,
+        2.13385442e+00,  2.13385442e+00,  2.13385442e+00,  2.13385442e+00,
+        2.40918660e+00,  2.40918660e+00,  2.40918660e+00,  2.40918660e+00,
+        2.40918660e+00, -1.00545852e+00, -1.00545852e+00, -1.00545852e+00,
+       -1.00545852e+00, -1.00545852e+00, -1.93340611e+00, -1.93340611e+00,
+       -1.93340611e+00, -1.93340611e+00, -1.93340611e+00, -2.81745497e+02,
+       -2.81745497e+02, -2.81745497e+02, -2.81745497e+02, -2.81745497e+02,
+        5.76426576e+03,  5.76426576e+03,  5.76426576e+03,  5.76426576e+03,
+        5.76426576e+03,  4.68402189e+03,  4.68402189e+03,  4.68402189e+03,
+        4.68402189e+03,  4.68402189e+03, -2.12204483e+04, -2.12204483e+04,
+       -2.12204483e+04, -2.12204483e+04, -2.12204483e+04, -1.76039083e+02,
+       -1.76039083e+02, -1.76039083e+02, -1.76039083e+02, -1.76039083e+02,
+       -6.84145080e+02, -6.84145080e+02, -6.84145080e+02, -6.84145080e+02,
+       -6.84145080e+02, -7.72849641e+02, -7.72849641e+02, -7.72849641e+02,
+       -7.72849641e+02, -7.72849641e+02]
+    
+    # repopulate the percent data
+    pct = [3.63, 24.34,  45.95,  95.45, 100.  ,  14.53,  37.55,  57.14,
+        80.58, 100.  ,  14.35,  35.17,  50.  ,  84.93, 100.  ,  12.14,
+        36.55,  52.38,  79.61, 100.  ,  19.33,  37.56,  62.5 ,  89.04,
+       100.  ,  14.89,  30.79,  27.03,  83.52, 100.  ,  23.44,  48.36,
+        59.46,  74.43, 100.  ,  26.22,  43.01,  59.46,  77.27,  80.  ,
+        18.79,  36.14,  66.67,  78.64, 100.  ,  23.61,  33.73,  56.25,
+        83.56,  66.67,  27.2 ,  38.86,  56.76,  73.3 ,  40.  ,  28.5 ,
+        45.96,  40.54,  73.3 ,  40.  ,  22.22,  41.77,  66.67,  72.82,
+        50.  ,  26.67,  39.23,  62.5 ,  82.19,  66.67]
+    
+    # repopulate the group data
+    group = ['Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD',
+       'Ended CN', 'No DX Change', 'CN to MCI', 'MCI to AD', 'CN to AD']
+    
+    # rebuild the dataframe
+    changes = pd.DataFrame({'biomarker': biomarker, 'thresh': thresh, 'pct': pct, 'group': group})
+    
+    return changes
