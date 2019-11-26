@@ -120,6 +120,7 @@ def optimize_combo(fe, biomarker, fp_rate, dt_rate, size, gender, increase=True)
     fp_th_value = np.mean(th_value_at_dt_rate[biomarker])
     dr_th_value = np.mean(th_value_at_fp_rate[biomarker])
     
+    
     # display results     
     print(100-fp_rate, '% false positive threshold value: ', fp_th_value)
     print(100-dt_rate, '% detection threshold value: ', dr_th_value)
@@ -140,8 +141,34 @@ def optimize_combo(fe, biomarker, fp_rate, dt_rate, size, gender, increase=True)
     if increase:
         print('The detection rate for AD at', fp_rate, '% false positive rate: ', round(100-ad_score,2), '%')
         print('The false positive rate at', dt_rate, '% AD detection: ', round(100-non_score,2), '%')
-        #return round(100-ad_score,2), round(100-non_score,2)
+        return round(100-ad_score,2), round(100-non_score,2), fp_th_value, dr_th_value
     else:    
         print('The detection rate for AD at',100-fp_rate, '% false positive rate: ', ad_score, '%')
         print('The false positive rate at', 100-dt_rate, '% AD detection: ', non_score, '%')
-        #return ad_score, non_score
+        return ad_score, non_score, fp_th_value, dr_th_value
+    
+# code below was to try and optimize the function, couldn't get to a point to make it work the way I want
+CDRSB_bl_males = pd.DataFrame(columns=['biomarker', 'th1', 'dt_at_fp_rate','fp_rate', 'index1', 'th2', 'dr_rate', 
+                                       'fp_at_dr_rate', 'index2'])
+
+fp_rate = 0
+dt_rate = 100
+
+for i in range(26):
+    
+    
+    dt_at_fp_rate, fp_at_dr_rate, th_index1, th_index2 = opt.optimize_combo(final_exam, 'CDRSB_bl', fp_rate=fp_rate, 
+                                                                            dt_rate=dt_rate, size=10000, 
+                                                                            gender='males', increase=True)
+    
+    index1 = dt_at_fp_rate - fp_rate
+    index2 = dt_rate - fp_at_dr_rate
+    
+    add_row = pd.DataFrame({'biomarker': 'CDRSB_bl_males', 'th1': th_index1, 'dt_at_fp_rate': dt_at_fp_rate, 
+                            'fp_rate': fp_rate, 'index1': index1, 'th2': th_index2, 'dr_rate': dt_rate, 
+                            'fp_at_dr_rate': fp_at_dr_rate, 'index2': index2}, index=[i])
+    
+    CDRSB_bl_males = CDRSB_bl_males.append(add_row, sort=False, ignore_index=True)
+    
+    fp_rate += 1
+    dt_rate -= 1
