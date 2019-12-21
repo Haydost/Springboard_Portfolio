@@ -1,5 +1,4 @@
 # Springboard
 Springboard Data Science Repository
 
-Check the CT_Solutions folder for each project.
-Otherwise, the project file is the only file in each project folder.
+Each folder has distinct examples of data science methods and tools applied to different types of data. Checkout the Capstone 1 Project for Alzheimer's Disease prediction.
