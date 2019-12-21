@@ -58,12 +58,14 @@ def get_delta_scaled(final_exam):
     
     # extract the features for change in diagnosis
     X_delta = deltas_df.reindex(columns=['CDRSB_delta', 'ADAS11_delta', 'ADAS13_delta', 'MMSE_delta',
-                                              'RAVLT_delta', 'Hippocampus_delta', 'Ventricles_delta', 'WholeBrain_delta',
-                                              'Entorhinal_delta', 'MidTemp_delta', 'PTGENDER_Male'])
+                                         'RAVLT_delta', 'Hippocampus_delta', 'Ventricles_delta',
+                                         'WholeBrain_delta', 'Entorhinal_delta', 'MidTemp_delta',
+                                         'PTGENDER_Male'])
       
     # store the feature names
-    feature_names = np.array(['CDRSB_delta', 'ADAS11_delta', 'ADAS13_delta', 'MMSE_delta', 'RAVLT_delta', 'Hippocampus_delta',
-                              'Ventricles_delta', 'WholeBrain_delta', 'Entorhinal_delta', 'MidTemp_delta', 'PTGENDER_Male'])
+    feature_names = np.array(['CDRSB_delta', 'ADAS11_delta', 'ADAS13_delta', 'MMSE_delta', 'RAVLT_delta',
+                              'Hippocampus_delta', 'Ventricles_delta', 'WholeBrain_delta',
+                              'Entorhinal_delta', 'MidTemp_delta', 'PTGENDER_Male'])
     
     # standardize the data
     scaler = StandardScaler()
