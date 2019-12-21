@@ -29,13 +29,14 @@ if 'KNeighborsClassifier' not in globals():
 sns.set()
 
 
-def get_delta_scaled(final_exam):
+def get_delta_scaled(final_exam, neg_one=False):
     """Take the final_exam dataframe and return datasets.
     
     This function returns five numpy arrays: feature_names, X_delta_male, 
     X_delta_female, y_delta_male, and y_delta_female. The two X arrays hold
     the feature data. The two y arrays hold the diagnosis group labels.
-    The feature_names array hold a list of the features."""
+    The feature_names array hold a list of the features. The neg_one
+    parameter allows you to specify -1 for the negative class (for SVM)."""
     
     # map the diagnosis group and assign to dx_group
     nc_idx = final_exam[final_exam.DX == final_exam.DX_bl2].index
@@ -43,11 +44,18 @@ def get_delta_scaled(final_exam):
     mci_ad_idx = final_exam[(final_exam.DX == 'AD') & (final_exam.DX_bl2 == 'MCI')].index
     cn_ad_idx = final_exam[(final_exam.DX == 'AD') & (final_exam.DX_bl2 == 'CN')].index
 
-    labels = pd.concat([pd.DataFrame({'dx_group': 0}, index=nc_idx),
-                        pd.DataFrame({'dx_group': 0}, index=cn_mci_idx),
-                        pd.DataFrame({'dx_group': 1}, index=mci_ad_idx),
-                        pd.DataFrame({'dx_group': 1}, index=cn_ad_idx)
-                       ]).sort_index()
+    if neg_one:
+        labels = pd.concat([pd.DataFrame({'dx_group': -1}, index=nc_idx),
+                            pd.DataFrame({'dx_group': -1}, index=cn_mci_idx),
+                            pd.DataFrame({'dx_group': 1}, index=mci_ad_idx),
+                            pd.DataFrame({'dx_group': 1}, index=cn_ad_idx)
+                           ]).sort_index()
+    else:
+        labels = pd.concat([pd.DataFrame({'dx_group': 0}, index=nc_idx),
+                            pd.DataFrame({'dx_group': 0}, index=cn_mci_idx),
+                            pd.DataFrame({'dx_group': 1}, index=mci_ad_idx),
+                            pd.DataFrame({'dx_group': 1}, index=cn_ad_idx)
+                           ]).sort_index()
     
     # add to the dataframe and ensure every row has a label
     deltas_df = final_exam.loc[labels.index]
