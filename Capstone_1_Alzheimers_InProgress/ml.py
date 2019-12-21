@@ -43,10 +43,10 @@ def get_delta_scaled(final_exam):
     mci_ad_idx = final_exam[(final_exam.DX == 'AD') & (final_exam.DX_bl2 == 'MCI')].index
     cn_ad_idx = final_exam[(final_exam.DX == 'AD') & (final_exam.DX_bl2 == 'CN')].index
 
-    labels = pd.concat([pd.DataFrame({'dx_group': 'No Change'}, index=nc_idx),
-                        pd.DataFrame({'dx_group': 'CN to MCI'}, index=cn_mci_idx),
-                        pd.DataFrame({'dx_group': 'MCI to AD'}, index=mci_ad_idx),
-                        pd.DataFrame({'dx_group': 'CN to AD'}, index=cn_ad_idx)
+    labels = pd.concat([pd.DataFrame({'dx_group': 0}, index=nc_idx),
+                        pd.DataFrame({'dx_group': 0}, index=cn_mci_idx),
+                        pd.DataFrame({'dx_group': 1}, index=mci_ad_idx),
+                        pd.DataFrame({'dx_group': 1}, index=cn_ad_idx)
                        ]).sort_index()
     
     # add to the dataframe and ensure every row has a label
