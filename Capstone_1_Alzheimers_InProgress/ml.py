@@ -156,3 +156,51 @@ def plot_f1_scores(k, s, r, b, l, n):
     _ = plt.xlabel('Model')
     _ = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.show()
+    
+def get_bl_data(final_exam, neg_one=False):
+    """This function extracts the baseline data features for machine learning.
+    
+    Pass the final_exam dataframe, specify optional neg_one=True for SVM (sets)
+    the non-Ad class as -1 vs 0. Returns features (X), labels (y), and 
+    feature_names.
+    """
+    
+    # map the diagnosis group and assign to dx_group
+    non_ad_idx = final_exam[final_exam.DX != 'AD'].index
+    ad_idx = final_exam[final_exam.DX == 'AD'].index
+    
+    if neg_one:
+        labels = pd.concat([pd.DataFrame({'dx_group': -1}, index=non_ad_idx),
+                            pd.DataFrame({'dx_group': 1}, index=ad_idx)
+                           ]).sort_index()
+    else:
+        labels = pd.concat([pd.DataFrame({'dx_group': 0}, index=non_ad_idx),
+                            pd.DataFrame({'dx_group': 1}, index=ad_idx)
+                           ]).sort_index()
+    
+    # add to the dataframe and ensure every row has a label
+    bl_df = final_exam.loc[labels.index]
+    bl_df.loc[:,'dx_group'] = labels.dx_group 
+
+    # convert gender to numeric column
+    bl_df = pd.get_dummies(bl_df, drop_first=True, columns=['PTGENDER'])
+    
+    # extract the baseline features
+    X_bl = bl_df.reindex(columns=['CDRSB_bl', 'ADAS11_bl', 'ADAS13_bl', 'MMSE_bl', 'RAVLT_immediate_bl', 
+                              'Hippocampus_bl', 'Ventricles_bl', 'WholeBrain_bl', 'Entorhinal_bl', 
+                              'MidTemp_bl', 'PTGENDER_Male'])
+      
+    # store the feature names
+    feature_names = np.array(['CDRSB_bl', 'ADAS11_bl', 'ADAS13_bl', 'MMSE_bl', 'RAVLT_immediate_bl', 
+                              'Hippocampus_bl', 'Ventricles_bl', 'WholeBrain_bl', 'Entorhinal_bl', 
+                              'MidTemp_bl', 'PTGENDER_Male'])
+    
+    # standardize the data
+    scaler = StandardScaler()
+    Xd = scaler.fit_transform(X_bl)
+    
+    # extract the labels
+    yd = np.array(bl_df.dx_group)
+    
+    # return the data
+    return feature_names, Xd, yd
