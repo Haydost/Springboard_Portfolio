@@ -123,11 +123,36 @@ def plot_best_k(X_train, X_test, y_train, y_test, kmax=9):
         s = 20
         
     # Generate plot
-    plt.title('k-NN: Varying Number of Neighbors')
-    plt.plot(neighbors, test_accuracy, label = 'Testing Accuracy')
-    plt.plot(neighbors, train_accuracy, label = 'Training Accuracy')
-    plt.legend()
-    plt.xlabel('Number of Neighbors')
-    plt.ylabel('Accuracy')
-    plt.xticks(np.arange(0,kmax,s))
+    _ = plt.title('k-NN: Varying Number of Neighbors')
+    _ = plt.plot(neighbors, test_accuracy, label = 'Testing Accuracy')
+    _ = plt.plot(neighbors, train_accuracy, label = 'Training Accuracy')
+    _ = plt.legend()
+    _ = plt.xlabel('Number of Neighbors')
+    _ = plt.ylabel('Accuracy')
+    _ = plt.xticks(np.arange(0,kmax,s))
+    plt.show()
+    
+def plot_f1_scores(k, s, r, b, l, n):
+    """This function accepts six dictionaries containing classification reports.
+    
+    This function is designed to work specifically with the six dictionaries created 
+    in the 5-Machine_Learning notebook, as the second dictionary is SVM, which
+    uses classes of -1 and 1, whereas the other classes are 0 and 1."""
+    
+    # extract the data and store in a dataframe
+    df = pd.DataFrame({'score': [k['0']['f1-score'], k['1']['f1-score'], s['-1']['f1-score'], s['1']['f1-score'],
+                                 r['0']['f1-score'], r['1']['f1-score'], b['0']['f1-score'], b['1']['f1-score'],
+                                 l['0']['f1-score'], l['1']['f1-score'], n['0']['f1-score'], n['1']['f1-score']],
+                       'model': ['KNN', 'KNN', 'SVM', 'SVM', 'Random Forest', 'Random Forest',
+                                 'AdaBoost', 'AdaBoost', 'Log Reg', 'Log Reg', 'Naive Bayes', 'Naive Bayes'],
+                       'group': ['Non AD', 'AD', 'Non AD', 'AD', 'Non AD', 'AD', 'Non AD', 'AD',
+                                 'Non AD', 'AD', 'Non AD', 'AD']})
+    
+    # create the plot
+    ax = sns.barplot('model', 'score', hue='group', data=df)
+    _ = plt.setp(ax.get_xticklabels(), rotation=25)
+    _ = plt.title('F1 Scores for Each Model')
+    _ = plt.ylabel('F1 Score')
+    _ = plt.xlabel('Model')
+    _ = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.show()
