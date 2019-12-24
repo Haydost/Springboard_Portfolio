@@ -20,10 +20,28 @@ if 'scipy.stats' not in globals():
     import scipy.stats
     
 if 'StandardScaler' not in globals():
-    from sklearn.preprocessing import StandardScaler
+    from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 if 'KNeighborsClassifier' not in globals():
     from sklearn.neighbors import KNeighborsClassifier
+    
+if 'SVC' not in globals():    
+    from sklearn.svm import SVC
+    
+if 'train_test_split' not in globals():
+    from sklearn.model_selection import train_test_split, GridSearchCV
+    
+if 'MultinomialNB' not in globals():
+    from sklearn.naive_bayes import MultinomialNB
+
+if 'confusion_matrix' not in globals():
+    from sklearn.metrics import roc_auc_score, confusion_matrix, classification_report
+
+if 'RandomForestClassifier' not in globals():
+    from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+
+if 'linear_model' not in globals():
+    from sklearn import linear_model
 
 
 sns.set()
@@ -204,3 +222,206 @@ def get_bl_data(final_exam, neg_one=False):
     
     # return the data
     return feature_names, Xd, yd
+
+def run_clinical_models(final_exam, biomarkers):
+    """This dataframe runs six machine learning models on only the clinical biomarkes.
+    
+    A dataframe containing summary information will be returned."""
+    
+    # map the diagnosis group and assign to dx_group
+    nc_idx = final_exam[final_exam.DX == final_exam.DX_bl2].index
+    cn_mci_idx = final_exam[(final_exam.DX == 'MCI') & (final_exam.DX_bl2 == 'CN')].index
+    mci_ad_idx = final_exam[(final_exam.DX == 'AD') & (final_exam.DX_bl2 == 'MCI')].index
+    cn_ad_idx = final_exam[(final_exam.DX == 'AD') & (final_exam.DX_bl2 == 'CN')].index
+    
+    labels = pd.concat([pd.DataFrame({'dx_group': 0}, index=nc_idx),
+                            pd.DataFrame({'dx_group': 0}, index=cn_mci_idx),
+                            pd.DataFrame({'dx_group': 1}, index=mci_ad_idx),
+                            pd.DataFrame({'dx_group': 1}, index=cn_ad_idx)
+                           ]).sort_index()
+    
+    # add to the dataframe and ensure every row has a label
+    labeled_df = final_exam.loc[labels.index]
+    labeled_df.loc[:,'dx_group'] = labels.dx_group
+
+    # convert gender to numeric column
+    labeled_df = pd.get_dummies(labeled_df, drop_first=True, columns=['PTGENDER'])
+    
+    if biomarkers == 'deltas':
+        # extract the features for change in diagnosis
+        X = labeled_df.reindex(columns=['CDRSB_delta', 'ADAS11_delta', 'ADAS13_delta', 'MMSE_delta',
+                                         'RAVLT_delta', 'PTGENDER_Male'])
+          
+        # store the feature names
+        feature_names = np.array(['CDRSB_delta', 'ADAS11_delta', 'ADAS13_delta', 'MMSE_delta', 'RAVLT_delta',
+                              'PTGENDER_Male'])
+    
+    elif biomarkers == 'baseline':
+        # extract the features for change in diagnosis
+        X = labeled_df.reindex(columns=['CDRSB_bl', 'ADAS11_bl', 'ADAS13_bl', 'MMSE_bl',
+                                         'RAVLT_immediate_bl', 'PTGENDER_Male'])
+          
+        # store the feature names
+        feature_names = np.array(['CDRSB_bl', 'ADAS11_bl', 'ADAS13_bl', 'MMSE_bl',
+                                         'RAVLT_immediate_bl', 'PTGENDER_Male'])
+        
+    # standardize the data
+    scaler = StandardScaler()
+    Xd = scaler.fit_transform(X)
+    
+    # extract the labels
+    yd = np.array(labeled_df.dx_group)
+        
+    # split into training and test data
+    Xd_train, Xd_test, yd_train, yd_test = train_test_split(Xd, yd, test_size=0.3, 
+                                                    random_state=21, stratify=yd)
+    
+    # initialize dataframe to hold summary info
+    columns = ['model', 'train_acc', 'test_acc', 'auc', 'tp', 'fn', 'tn', 'fp',
+              'precision', 'recall', 'neg_f1', 'AD_f1']
+    df = pd.DataFrame(columns=columns)
+
+    # knn model
+    param_grid = {'n_neighbors': np.arange(1, 50)}
+    knn = KNeighborsClassifier()
+    knn_cv = GridSearchCV(knn, param_grid, cv=5)
+    knn_cv.fit(Xd_train, yd_train)
+    k = knn_cv.best_params_['n_neighbors']
+    knn = KNeighborsClassifier(n_neighbors=k)
+    knn.fit(Xd_train, yd_train)
+    y_pred = knn.predict(Xd_test)
+    train_acc = knn.score(Xd_train, yd_train)
+    test_acc = knn.score(Xd_test, yd_test)
+    y_pred_prob = knn.predict_proba(Xd_test)[:,1]
+    auc = roc_auc_score(yd_test, y_pred_prob)
+    tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
+    prec = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    rep = classification_report(yd_test, y_pred, output_dict=True)
+    knn_df = pd.DataFrame({'model': 'knn', 'train_acc': train_acc, 'test_acc': test_acc,
+               'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 'precision': prec, 'recall': recall,
+               'neg_f1': rep['0']['f1-score'], 'AD_f1': rep['1']['f1-score']}, index=[0])
+    df = df.append(knn_df, ignore_index=True, sort=False)
+    
+    # SVM model
+    # map the svm labels
+    yd_train_svm = np.where(yd_train == 0, yd_train - 1, yd_train)
+    yd_test_svm = np.where(yd_test == 0, yd_test - 1, yd_test)
+    num_features = Xd_train.shape[1]
+    param_grid = {'C': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5], 
+              'gamma': [(1/(num_features*Xd_train.var())), (1/num_features)]}
+    svm = SVC(class_weight='balanced', probability=True)
+    svm_cv = GridSearchCV(svm, param_grid, cv=5)
+    svm_cv.fit(Xd_train, yd_train_svm)
+    C = svm_cv.best_params_['C']
+    gamma = svm_cv.best_params_['gamma']
+    svm = SVC(C=C, gamma=gamma, class_weight='balanced',
+         probability=True)
+    svm.fit(Xd_train, yd_train_svm)
+    y_pred = svm.predict(Xd_test)
+    train_acc = svm.score(Xd_train, yd_train_svm)
+    test_acc = svm.score(Xd_test, yd_test_svm)
+    y_pred_prob = svm.predict_proba(Xd_test)[:,1]
+    auc = roc_auc_score(yd_test_svm, y_pred_prob)
+    tn, fp, fn, tp = confusion_matrix(yd_test_svm, y_pred).ravel()
+    prec = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    rep = classification_report(yd_test_svm, y_pred, output_dict=True)
+    roc_auc_score(yd_test_svm, y_pred_prob)
+    svm_df = pd.DataFrame({'model': 'svm', 'train_acc': train_acc, 
+                           'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 'precision': prec,
+                           'recall': recall, 'neg_f1': rep['-1']['f1-score'], 'AD_f1': rep['1']['f1-score']},
+                         index=[1])
+    df = df.append(svm_df, ignore_index=True, sort=False)
+    
+    # Random Forests Model
+    trees = [101, 111, 121, 131, 141, 151]
+    max_f = [1, num_features, 'log2', 'sqrt']
+    param_grid = {'n_estimators': trees, 'max_features': max_f}
+    r_forest = RandomForestClassifier(class_weight='balanced', random_state=42)
+    r_forest_cv = GridSearchCV(r_forest, param_grid, cv=5)
+    r_forest_cv.fit(Xd_train, yd_train)
+    n_est = r_forest_cv.best_params_['n_estimators']
+    n_feat = r_forest_cv.best_params_['max_features']
+    rfc = RandomForestClassifier(n_estimators=n_est, max_features=n_feat, 
+                             class_weight='balanced', random_state=42)
+    rfc.fit(Xd_train, yd_train)
+    y_pred = rfc.predict(Xd_test)
+    train_acc = rfc.score(Xd_train, yd_train)
+    test_acc = rfc.score(Xd_test, yd_test)
+    y_pred_prob = rfc.predict_proba(Xd_test)[:,1]
+    auc = roc_auc_score(yd_test, y_pred_prob)
+    tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
+    prec = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    rep = classification_report(yd_test, y_pred, output_dict=True)
+    rfc_df = pd.DataFrame({'model': 'RF', 'train_acc': train_acc, 
+                           'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 
+                           'precision': prec, 'recall': recall, 'neg_f1': rep['0']['f1-score'], 
+                           'AD_f1': rep['1']['f1-score']}, index=[2])
+    df = df.append(rfc_df, ignore_index=True, sort=False)
+    
+    # AdaBoost Classifier
+    est = [31, 41, 51, 61, 71, 81, 91, 101]
+    param_grid = {'n_estimators': est}
+    boost = AdaBoostClassifier(random_state=42)
+    boost_cv = GridSearchCV(boost, param_grid, cv=5)
+    boost_cv.fit(Xd_train, yd_train)
+    n_est = boost_cv.best_params_['n_estimators']
+    model = AdaBoostClassifier(n_estimators=n_est, random_state=0)
+    model.fit(Xd_train, yd_train)
+    y_pred = model.predict(Xd_test)
+    train_acc = model.score(Xd_train, yd_train)
+    test_acc = model.score(Xd_test, yd_test)
+    y_pred_prob = model.predict_proba(Xd_test)[:,1]
+    auc = roc_auc_score(yd_test, y_pred_prob)
+    tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
+    prec = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    rep = classification_report(yd_test, y_pred, output_dict=True)
+    boost_df = pd.DataFrame({'model': 'AdaBoost', 'train_acc': train_acc, 
+                           'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 
+                           'precision': prec, 'recall': recall, 'neg_f1': rep['0']['f1-score'], 
+                           'AD_f1': rep['1']['f1-score']}, index=[3])
+    df = df.append(boost_df, ignore_index=True, sort=False)
+    
+    # logistic regression
+    logreg = linear_model.LogisticRegression(solver='lbfgs', class_weight='balanced', random_state=42)
+    logreg.fit(Xd_train, yd_train)
+    y_pred = logreg.predict(Xd_test)
+    train_acc = logreg.score(Xd_train, yd_train)
+    test_acc = logreg.score(Xd_test, yd_test)
+    y_pred_prob = logreg.predict_proba(Xd_test)[:,1]
+    auc = roc_auc_score(yd_test, y_pred_prob)
+    tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
+    prec = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    rep = classification_report(yd_test, y_pred, output_dict=True)
+    logreg_df = pd.DataFrame({'model': 'logreg', 'train_acc': train_acc, 
+                           'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 
+                           'precision': prec, 'recall': recall, 'neg_f1': rep['0']['f1-score'], 
+                           'AD_f1': rep['1']['f1-score']}, index=[4])
+    df = df.append(logreg_df, ignore_index=True, sort=False)
+    
+    # Naive Bayes
+    scaler = MinMaxScaler()
+    X_scaled = scaler.fit_transform(Xd_train)
+    model = MultinomialNB()
+    model.fit(X_scaled, yd_train)
+    y_pred = model.predict(Xd_test)
+    train_acc = model.score(X_scaled, yd_train)
+    test_acc = model.score(Xd_test, yd_test)
+    y_pred_prob = model.predict_proba(Xd_test)[:,1]
+    auc = roc_auc_score(yd_test, y_pred_prob)
+    tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
+    prec = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    rep = classification_report(yd_test, y_pred, output_dict=True)
+    nb_df = pd.DataFrame({'model': 'bayes', 'train_acc': train_acc, 
+                           'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 
+                           'precision': prec, 'recall': recall, 'neg_f1': rep['0']['f1-score'], 
+                           'AD_f1': rep['1']['f1-score']}, index=[5])
+    df = df.append(nb_df, ignore_index=True, sort=False)
+    
+    # return the dataframe
+    return df
