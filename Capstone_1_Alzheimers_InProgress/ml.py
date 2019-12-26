@@ -426,8 +426,8 @@ def run_clinical_models(final_exam, biomarkers):
     # return the dataframe
     return df
 
-def run_models_pca(Xd_train, Xd_test, yd_train, yd_test):
-    """This function runs the change in biomarker pca data through the models.
+def run_models(Xd_train, Xd_test, yd_train, yd_test):
+    """This function runs all of the classification data supplied through the models.
     
     Supply the training and test data after transforming the X data using pca.
     """
