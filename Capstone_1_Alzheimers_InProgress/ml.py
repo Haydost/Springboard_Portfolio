@@ -86,12 +86,12 @@ def get_delta_scaled(final_exam, neg_one=False):
     X_delta = deltas_df.reindex(columns=['CDRSB_delta', 'ADAS11_delta', 'ADAS13_delta', 'MMSE_delta',
                                          'RAVLT_delta', 'Hippocampus_delta', 'Ventricles_delta',
                                          'WholeBrain_delta', 'Entorhinal_delta', 'MidTemp_delta',
-                                         'PTGENDER_Male'])
+                                         'PTGENDER_Male', 'AGE'])
       
     # store the feature names
     feature_names = np.array(['CDRSB_delta', 'ADAS11_delta', 'ADAS13_delta', 'MMSE_delta', 'RAVLT_delta',
                               'Hippocampus_delta', 'Ventricles_delta', 'WholeBrain_delta',
-                              'Entorhinal_delta', 'MidTemp_delta', 'PTGENDER_Male'])
+                              'Entorhinal_delta', 'MidTemp_delta', 'PTGENDER_Male', 'AGE'])
     
     # standardize the data
     scaler = StandardScaler()
@@ -206,12 +206,12 @@ def get_bl_data(final_exam, neg_one=False):
     # extract the baseline features
     X_bl = bl_df.reindex(columns=['CDRSB_bl', 'ADAS11_bl', 'ADAS13_bl', 'MMSE_bl', 'RAVLT_immediate_bl', 
                               'Hippocampus_bl', 'Ventricles_bl', 'WholeBrain_bl', 'Entorhinal_bl', 
-                              'MidTemp_bl', 'PTGENDER_Male'])
+                              'MidTemp_bl', 'PTGENDER_Male', 'AGE'])
       
     # store the feature names
     feature_names = np.array(['CDRSB_bl', 'ADAS11_bl', 'ADAS13_bl', 'MMSE_bl', 'RAVLT_immediate_bl', 
                               'Hippocampus_bl', 'Ventricles_bl', 'WholeBrain_bl', 'Entorhinal_bl', 
-                              'MidTemp_bl', 'PTGENDER_Male'])
+                              'MidTemp_bl', 'PTGENDER_Male', 'AGE'])
     
     # standardize the data
     scaler = StandardScaler()
@@ -250,20 +250,20 @@ def run_clinical_models(final_exam, biomarkers):
     if biomarkers == 'deltas':
         # extract the features for change in diagnosis
         X = labeled_df.reindex(columns=['CDRSB_delta', 'ADAS11_delta', 'ADAS13_delta', 'MMSE_delta',
-                                         'RAVLT_delta', 'PTGENDER_Male'])
+                                         'RAVLT_delta', 'PTGENDER_Male', 'AGE'])
           
         # store the feature names
         feature_names = np.array(['CDRSB_delta', 'ADAS11_delta', 'ADAS13_delta', 'MMSE_delta', 'RAVLT_delta',
-                              'PTGENDER_Male'])
+                              'PTGENDER_Male', 'AGE'])
     
     elif biomarkers == 'baseline':
         # extract the features for change in diagnosis
         X = labeled_df.reindex(columns=['CDRSB_bl', 'ADAS11_bl', 'ADAS13_bl', 'MMSE_bl',
-                                         'RAVLT_immediate_bl', 'PTGENDER_Male'])
+                                         'RAVLT_immediate_bl', 'PTGENDER_Male', 'AGE'])
           
         # store the feature names
         feature_names = np.array(['CDRSB_bl', 'ADAS11_bl', 'ADAS13_bl', 'MMSE_bl',
-                                         'RAVLT_immediate_bl', 'PTGENDER_Male'])
+                                         'RAVLT_immediate_bl', 'PTGENDER_Male', 'AGE'])
         
     # standardize the data
     scaler = StandardScaler()
@@ -335,7 +335,7 @@ def run_clinical_models(final_exam, biomarkers):
     df = df.append(svm_df, ignore_index=True, sort=False)
     
     # Random Forests Model
-    trees = [101, 111, 121, 131, 141, 151]
+    trees = [101, 111, 121, 131, 141, 151, 161, 171, 181]
     max_f = [1, num_features, 'log2', 'sqrt']
     param_grid = {'n_estimators': trees, 'max_features': max_f}
     r_forest = RandomForestClassifier(class_weight='balanced', random_state=42)
@@ -491,7 +491,7 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     df = df.append(svm_df, ignore_index=True, sort=False)
     
     # Random Forests Model
-    trees = [101, 111, 121, 131, 141, 151]
+    trees = [101, 111, 121, 131, 141, 151, 161, 171, 181]
     max_f = [1, num_features, 'log2', 'sqrt']
     param_grid = {'n_estimators': trees, 'max_features': max_f}
     r_forest = RandomForestClassifier(class_weight='balanced', random_state=42)
