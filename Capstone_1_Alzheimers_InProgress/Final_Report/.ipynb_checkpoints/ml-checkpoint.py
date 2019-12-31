@@ -429,12 +429,12 @@ def run_clinical_models(final_exam, biomarkers):
 def run_models(Xd_train, Xd_test, yd_train, yd_test):
     """This function runs all of the classification data supplied through the models.
     
-    Supply the training and test data.
+    Supply the training and test data after transforming the X data using pca.
     """
     
     # initialize dataframe to hold summary info
-    columns = ['model', 'hyper_params', 'train_acc', 'test_acc', 'auc', 'tp', 'fn', 'tn', 'fp',
-              'precision', 'recall', 'fpr', 'neg_f1', 'AD_f1']
+    columns = ['model', 'train_acc', 'test_acc', 'auc', 'tp', 'fn', 'tn', 'fp',
+              'precision', 'recall', 'neg_f1', 'AD_f1']
     df = pd.DataFrame(columns=columns)
 
     # knn model
@@ -443,7 +443,6 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     knn_cv = GridSearchCV(knn, param_grid, cv=5)
     knn_cv.fit(Xd_train, yd_train)
     k = knn_cv.best_params_['n_neighbors']
-    hp = 'k: {}'.format(k)
     knn = KNeighborsClassifier(n_neighbors=k)
     knn.fit(Xd_train, yd_train)
     y_pred = knn.predict(Xd_test)
@@ -454,11 +453,10 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
     prec = tp / (tp + fp)
     recall = tp / (tp + fn)
-    fpr = fp / (tn + fp)
     rep = classification_report(yd_test, y_pred, output_dict=True)
-    knn_df = pd.DataFrame({'model': 'knn', 'hyper_params': hp, 'train_acc': train_acc, 'test_acc': test_acc,
+    knn_df = pd.DataFrame({'model': 'knn', 'train_acc': train_acc, 'test_acc': test_acc,
                'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 'precision': prec, 'recall': recall,
-               'fpr': fpr, 'neg_f1': rep['0']['f1-score'], 'AD_f1': rep['1']['f1-score']}, index=[0])
+               'neg_f1': rep['0']['f1-score'], 'AD_f1': rep['1']['f1-score']}, index=[0])
     df = df.append(knn_df, ignore_index=True, sort=False)
     
     # SVM model
@@ -473,7 +471,6 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     svm_cv.fit(Xd_train, yd_train_svm)
     C = svm_cv.best_params_['C']
     gamma = svm_cv.best_params_['gamma']
-    hp = 'C: '.format(C) + '/ngamma: '.format(gamma)
     svm = SVC(C=C, gamma=gamma, class_weight='balanced',
          probability=True)
     svm.fit(Xd_train, yd_train_svm)
@@ -485,12 +482,11 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     tn, fp, fn, tp = confusion_matrix(yd_test_svm, y_pred).ravel()
     prec = tp / (tp + fp)
     recall = tp / (tp + fn)
-    fpr = fp / (tn + fp)
     rep = classification_report(yd_test_svm, y_pred, output_dict=True)
     roc_auc_score(yd_test_svm, y_pred_prob)
-    svm_df = pd.DataFrame({'model': 'svm', 'hyper_params': hp, 'train_acc': train_acc, 
+    svm_df = pd.DataFrame({'model': 'svm', 'train_acc': train_acc, 
                            'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 'precision': prec,
-                           'recall': recall, 'fpr': fpr, 'neg_f1': rep['-1']['f1-score'], 'AD_f1': rep['1']['f1-score']},
+                           'recall': recall, 'neg_f1': rep['-1']['f1-score'], 'AD_f1': rep['1']['f1-score']},
                          index=[1])
     df = df.append(svm_df, ignore_index=True, sort=False)
     
@@ -503,7 +499,6 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     r_forest_cv.fit(Xd_train, yd_train)
     n_est = r_forest_cv.best_params_['n_estimators']
     n_feat = r_forest_cv.best_params_['max_features']
-    hp = 'trees: '.format(n_est) + '\nmax_feats: '.format(n_feat)
     rfc = RandomForestClassifier(n_estimators=n_est, max_features=n_feat, 
                              class_weight='balanced', random_state=42)
     rfc.fit(Xd_train, yd_train)
@@ -515,11 +510,10 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
     prec = tp / (tp + fp)
     recall = tp / (tp + fn)
-    fpr = fp / (tn + fp)
     rep = classification_report(yd_test, y_pred, output_dict=True)
-    rfc_df = pd.DataFrame({'model': 'RF', 'hyper_params': hp, 'train_acc': train_acc, 
+    rfc_df = pd.DataFrame({'model': 'RF', 'train_acc': train_acc, 
                            'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 
-                           'precision': prec, 'recall': recall, 'fpr': fpr, 'neg_f1': rep['0']['f1-score'], 
+                           'precision': prec, 'recall': recall, 'neg_f1': rep['0']['f1-score'], 
                            'AD_f1': rep['1']['f1-score']}, index=[2])
     df = df.append(rfc_df, ignore_index=True, sort=False)
     
@@ -530,7 +524,6 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     boost_cv = GridSearchCV(boost, param_grid, cv=5)
     boost_cv.fit(Xd_train, yd_train)
     n_est = boost_cv.best_params_['n_estimators']
-    hp = 'num_estimators: '.format(n_est)
     model = AdaBoostClassifier(n_estimators=n_est, random_state=0)
     model.fit(Xd_train, yd_train)
     y_pred = model.predict(Xd_test)
@@ -541,11 +534,10 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
     prec = tp / (tp + fp)
     recall = tp / (tp + fn)
-    fpr = fp / (tn + fp)
     rep = classification_report(yd_test, y_pred, output_dict=True)
-    boost_df = pd.DataFrame({'model': 'AdaBoost', 'hyper_params': hp, 'train_acc': train_acc, 
+    boost_df = pd.DataFrame({'model': 'AdaBoost', 'train_acc': train_acc, 
                            'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 
-                           'precision': prec, 'recall': recall, 'fpr': fpr, 'neg_f1': rep['0']['f1-score'], 
+                           'precision': prec, 'recall': recall, 'neg_f1': rep['0']['f1-score'], 
                            'AD_f1': rep['1']['f1-score']}, index=[3])
     df = df.append(boost_df, ignore_index=True, sort=False)
     
@@ -560,11 +552,10 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
     prec = tp / (tp + fp)
     recall = tp / (tp + fn)
-    fpr = fp / (tn + fp)
     rep = classification_report(yd_test, y_pred, output_dict=True)
-    logreg_df = pd.DataFrame({'model': 'logreg', 'hyper_params': None, 'train_acc': train_acc, 
+    logreg_df = pd.DataFrame({'model': 'logreg', 'train_acc': train_acc, 
                            'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 
-                           'precision': prec, 'recall': recall, 'fpr': fpr, 'neg_f1': rep['0']['f1-score'], 
+                           'precision': prec, 'recall': recall, 'neg_f1': rep['0']['f1-score'], 
                            'AD_f1': rep['1']['f1-score']}, index=[4])
     df = df.append(logreg_df, ignore_index=True, sort=False)
     
@@ -581,11 +572,10 @@ def run_models(Xd_train, Xd_test, yd_train, yd_test):
     tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
     prec = tp / (tp + fp)
     recall = tp / (tp + fn)
-    fpr = fp / (tn + fp)
     rep = classification_report(yd_test, y_pred, output_dict=True)
-    nb_df = pd.DataFrame({'model': 'bayes', 'hyper_params': None, 'train_acc': train_acc, 
+    nb_df = pd.DataFrame({'model': 'bayes', 'train_acc': train_acc, 
                            'test_acc': test_acc, 'auc': auc, 'tp': tp, 'fn': fn, 'tn': tn, 'fp': fp, 
-                           'precision': prec, 'recall': recall, 'fpr': fpr, 'neg_f1': rep['0']['f1-score'], 
+                           'precision': prec, 'recall': recall, 'neg_f1': rep['0']['f1-score'], 
                            'AD_f1': rep['1']['f1-score']}, index=[5])
     df = df.append(nb_df, ignore_index=True, sort=False)
     
