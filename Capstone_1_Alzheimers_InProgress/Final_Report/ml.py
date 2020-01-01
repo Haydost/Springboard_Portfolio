@@ -42,6 +42,9 @@ if 'RandomForestClassifier' not in globals():
 
 if 'linear_model' not in globals():
     from sklearn import linear_model
+    
+if 'PCA' not in globals():
+    from sklearn.decomposition import PCA
 
 
 sns.set()
@@ -310,7 +313,7 @@ def run_clinical_models(final_exam, biomarkers):
     yd_train_svm = np.where(yd_train == 0, yd_train - 1, yd_train)
     yd_test_svm = np.where(yd_test == 0, yd_test - 1, yd_test)
     num_features = Xd_train.shape[1]
-    param_grid = {'C': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5], 
+    param_grid = {'C': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5, 1.75], 
               'gamma': [(1/(num_features*Xd_train.var())), (1/num_features)]}
     svm = SVC(class_weight='balanced', probability=True)
     svm_cv = GridSearchCV(svm, param_grid, cv=5)
@@ -339,7 +342,7 @@ def run_clinical_models(final_exam, biomarkers):
     df = df.append(svm_df, ignore_index=True, sort=False)
     
     # Random Forests Model
-    trees = [101, 111, 121, 131, 141, 151, 161, 171, 181, 191]
+    trees = [101, 111, 121, 131, 141, 151, 161, 171, 181, 191, 201, 211, 221]
     max_f = [1, num_features, 'log2', 'sqrt']
     param_grid = {'n_estimators': trees, 'max_features': max_f}
     r_forest = RandomForestClassifier(class_weight='balanced', random_state=42)
@@ -669,6 +672,94 @@ def run_deltas_ensemble(Xd_train, Xd_test, yd_train, yd_test, feature_names):
     pred = pd.DataFrame({'svm': svm_pred, 'lr_ff': logreg_pred, 'lr_red': red_logreg_pred})
     pred.loc[:,'total'] = pred.svm + pred.lr_ff + pred.lr_red
     mapper = {0: 0, 1: 0, 2: 1, 3: 1}
+    y_pred = pred.total.map(mapper)
+    
+    # print the results
+    print(confusion_matrix(yd_test, y_pred))
+    tn, fp, fn, tp = confusion_matrix(yd_test, y_pred).ravel()
+    dr = tp / (tp + fn)
+    fpr = fp / (fp + tn)
+    print('True Negatives: {}'.format(tn))
+    print('False Positives: {}'.format(fp))
+    print('False Negatives: {}'.format(fn))
+    print('True Positives: {}'.format(tp))
+    print('Detection Rate: {}'.format(dr))
+    print('False Positive Rate: {}'.format(fpr))
+    
+def run_bl_ensemble(Xd_train, Xd_test, yd_train, yd_test, feature_names):
+    """This function creates and returns information for an ensemble machine learning model.
+    
+    This model is designed specifically for this analysis and includes full feature SVM and 
+    logistic regression, 9 component pca for SVM and logistic regression, and logistic regression
+    omitting ADAS13_bl and PTGENDER_Male.
+    """
+    
+    # create -1, 1 labels for SVM
+    ysvm_train = np.where(yd_train == 0, yd_train - 1, yd_train)
+    ysvm_test = np.where(yd_test == 0, yd_test - 1, yd_test)
+    
+    # create the SVM model  
+    num_features = Xd_train.shape[1]
+    param_grid = {'C': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5], 
+                  'gamma': [(1/(num_features*Xd_train.var())), (1/num_features)]}
+    svm = SVC(class_weight='balanced', probability=True)
+    svm_cv = GridSearchCV(svm, param_grid, cv=5)
+    svm_cv.fit(Xd_train, ysvm_train)
+    C = svm_cv.best_params_['C']
+    gamma = svm_cv.best_params_['gamma']
+    svm = SVC(C=C, gamma=gamma, class_weight='balanced', probability=True)
+    svm.fit(Xd_train, ysvm_train)
+    svm_pred_scaled = svm.predict(Xd_test)
+    svm_pred = np.where(svm_pred_scaled == -1, svm_pred_scaled + 1, svm_pred_scaled)
+    svm_prob = svm.predict_proba(Xd_test)[:,1]
+
+    # Logistic regression (full feature)
+    logreg = linear_model.LogisticRegression(solver='lbfgs', class_weight='balanced', random_state=42)
+    logreg.fit(Xd_train, yd_train)
+    logreg_pred = logreg.predict(Xd_test)
+    logreg_prob = logreg.predict_proba(Xd_test)[:,1]
+
+    # reduced logistic regression
+    mask = (feature_names != 'ADAS13_bl') & (feature_names != 'PTGENDER_Male')
+    Xtrain_reduced = Xd_train[:,mask]
+    Xtest_reduced = Xd_test[:,mask]
+    red_logreg = linear_model.LogisticRegression(solver='lbfgs', class_weight='balanced', random_state=42)
+    red_logreg.fit(Xtrain_reduced, yd_train)
+    red_logreg_pred = red_logreg.predict(Xtest_reduced)
+    red_logreg_prob = red_logreg.predict_proba(Xtest_reduced)[:,1]
+    
+    # create PCA model with 9 components
+    pca = PCA(n_components=9)
+    pca.fit(Xd_train)
+    Xpca_train = pca.transform(Xd_train)
+    Xpca_test = pca.transform(Xd_test)
+    
+    # SVM PCA
+    num_features = Xpca_train.shape[1]
+    param_grid = {'C': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5], 
+                  'gamma': [(1/(num_features*Xpca_train.var())), (1/num_features)]}
+    svm_pca = SVC(class_weight='balanced', probability=True)
+    svm_pca_cv = GridSearchCV(svm_pca, param_grid, cv=5)
+    svm_pca_cv.fit(Xpca_train, ysvm_train)
+    C_pca = svm_pca_cv.best_params_['C']
+    gamma_pca = svm_pca_cv.best_params_['gamma']
+    svm_pca = SVC(C=C_pca, gamma=gamma_pca, class_weight='balanced', probability=True)
+    svm_pca.fit(Xpca_train, ysvm_train)
+    svm_pca_pred_scaled = svm_pca.predict(Xpca_test)
+    svm_pca_pred = np.where(svm_pca_pred_scaled == -1, svm_pca_pred_scaled + 1, svm_pca_pred_scaled)
+    svm_pca_prob = svm_pca.predict_proba(Xpca_test)[:,1]
+    
+    # logreg PCA
+    logreg_pca = linear_model.LogisticRegression(solver='lbfgs', class_weight='balanced', random_state=42)
+    logreg_pca.fit(Xpca_train, yd_train)
+    logreg_pca_pred = logreg_pca.predict(Xpca_test)
+    logreg_pca_prob = logreg_pca.predict_proba(Xpca_test)[:,1]
+    
+    # create a dataframe and count the votes
+    pred = pd.DataFrame({'svm_ff': svm_pred, 'lr_ff': logreg_pred, 'lr_red': red_logreg_pred,
+                        'svm_pca': svm_pca_pred, 'lr_pca': logreg_pca_pred})
+    pred.loc[:,'total'] = pred.svm_ff + pred.lr_ff + pred.lr_red + pred.svm_pca + pred.lr_pca
+    mapper = {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 1}
     y_pred = pred.total.map(mapper)
     
     # print the results
