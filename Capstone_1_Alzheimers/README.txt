@@ -3,6 +3,10 @@ There are in depth ipynb files for each section of the project that culminate
 in a milestone report and a final report. Presentation of the results are included
 in the AD_Final_Presentation.pptx file. Custom modules (.py files) were created
 and used for this analysis.
+    Classical statistical techniques were used to identify threshold values
+for predicting high-risk patients for Alzheimer's disease. Supervised machine
+learning algorithms were used to generate predictive models capable of identifying
+high-risk patients for Alzheimer's disease.
 
 Word Documents:
 Capstone1_Ideas                    Initial ideas for the capstone project
